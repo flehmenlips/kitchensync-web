@@ -24,6 +24,7 @@ import { OrdersPage } from "@/pages/OrdersPage";
 import { PayoutsPage } from "@/pages/PayoutsPage";
 import { BusinessesPage } from "@/pages/BusinessesPage";
 import NotFound from "./pages/NotFound";
+import { LandingPage } from "./pages/LandingPage";
 import { Loader2 } from "lucide-react";
 
 // Business Console Pages
@@ -86,29 +87,33 @@ function BusinessProtectedRoute({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   return (
     <Routes>
+      {/* Public Landing Page */}
+      <Route path="/" element={<LandingPage />} />
+
       {/* Admin Console Routes */}
       <Route
+        path="/admin"
         element={
           <ProtectedRoute>
             <DashboardLayout />
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<DashboardHome />} />
-        <Route path="/my-recipes" element={<MyRecipesPage />} />
-        <Route path="/recipes" element={<SharedRecipesPage />} />
-        <Route path="/tips" element={<TipsTutorialsPage />} />
-        <Route path="/users" element={<UsersPage />} />
-        <Route path="/analytics" element={<AnalyticsPage />} />
-        <Route path="/featured" element={<FeaturedPage />} />
-        <Route path="/admins" element={<AdminUsersPage />} />
-        <Route path="/activity" element={<ActivityLogPage />} />
-        <Route path="/moderation" element={<ModerationPage />} />
-        <Route path="/creators" element={<CreatorVerificationPage />} />
-        <Route path="/products" element={<ProductsPage />} />
-        <Route path="/orders" element={<OrdersPage />} />
-        <Route path="/payouts" element={<PayoutsPage />} />
-        <Route path="/businesses" element={<BusinessesPage />} />
+        <Route index element={<DashboardHome />} />
+        <Route path="my-recipes" element={<MyRecipesPage />} />
+        <Route path="recipes" element={<SharedRecipesPage />} />
+        <Route path="tips" element={<TipsTutorialsPage />} />
+        <Route path="users" element={<UsersPage />} />
+        <Route path="analytics" element={<AnalyticsPage />} />
+        <Route path="featured" element={<FeaturedPage />} />
+        <Route path="admins" element={<AdminUsersPage />} />
+        <Route path="activity" element={<ActivityLogPage />} />
+        <Route path="moderation" element={<ModerationPage />} />
+        <Route path="creators" element={<CreatorVerificationPage />} />
+        <Route path="products" element={<ProductsPage />} />
+        <Route path="orders" element={<OrdersPage />} />
+        <Route path="payouts" element={<PayoutsPage />} />
+        <Route path="businesses" element={<BusinessesPage />} />
       </Route>
 
       {/* Business Console Routes */}

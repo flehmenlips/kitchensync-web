@@ -38,21 +38,21 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { title: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { title: 'Analytics', href: '/analytics', icon: BarChart3 },
-  { title: 'Featured', href: '/featured', icon: Sparkles },
-  { title: 'Moderation', href: '/moderation', icon: Flag },
-  { title: 'Creators', href: '/creators', icon: BadgeCheck },
-  { title: 'Businesses', href: '/businesses', icon: Building2, section: 'Commercial' },
-  { title: 'Products', href: '/products', icon: Package, section: 'Marketplace' },
-  { title: 'Orders', href: '/orders', icon: Receipt, section: 'Marketplace' },
-  { title: 'Payouts', href: '/payouts', icon: Wallet, section: 'Marketplace' },
-  { title: 'My Recipes', href: '/my-recipes', icon: UtensilsCrossed, superadminOnly: true },
-  { title: 'Shared Recipes', href: '/recipes', icon: BookOpen },
-  { title: 'Tips & Tutorials', href: '/tips', icon: Lightbulb },
-  { title: 'Users', href: '/users', icon: Users },
-  { title: 'Admin Users', href: '/admins', icon: Shield, superadminOnly: true },
-  { title: 'Activity Log', href: '/activity', icon: History },
+  { title: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+  { title: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
+  { title: 'Featured', href: '/admin/featured', icon: Sparkles },
+  { title: 'Moderation', href: '/admin/moderation', icon: Flag },
+  { title: 'Creators', href: '/admin/creators', icon: BadgeCheck },
+  { title: 'Businesses', href: '/admin/businesses', icon: Building2, section: 'Commercial' },
+  { title: 'Products', href: '/admin/products', icon: Package, section: 'Marketplace' },
+  { title: 'Orders', href: '/admin/orders', icon: Receipt, section: 'Marketplace' },
+  { title: 'Payouts', href: '/admin/payouts', icon: Wallet, section: 'Marketplace' },
+  { title: 'My Recipes', href: '/admin/my-recipes', icon: UtensilsCrossed, superadminOnly: true },
+  { title: 'Shared Recipes', href: '/admin/recipes', icon: BookOpen },
+  { title: 'Tips & Tutorials', href: '/admin/tips', icon: Lightbulb },
+  { title: 'Users', href: '/admin/users', icon: Users },
+  { title: 'Admin Users', href: '/admin/admins', icon: Shield, superadminOnly: true },
+  { title: 'Activity Log', href: '/admin/activity', icon: History },
 ];
 
 export function DashboardLayout() {
@@ -107,13 +107,13 @@ export function DashboardLayout() {
                         : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
                     )
                   }
-                  end={item.href === '/'}
+                  end={item.href === '/admin'}
                 >
                   <item.icon className="h-5 w-5 flex-shrink-0" />
                   {!collapsed ? <span>{item.title}</span> : null}
                 </NavLink>
                 {/* Add Business Console link after Businesses */}
-                {item.href === '/businesses' ? (
+                {item.href === '/admin/businesses' ? (
                   <NavLink
                     to="/business"
                     onClick={() => setMobileOpen(false)}
