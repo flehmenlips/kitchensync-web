@@ -31,7 +31,6 @@ import {
   Truck,
   ShoppingBag,
   ChefHat,
-  LogIn,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -131,8 +130,8 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
                 index < currentStep
                   ? 'bg-emerald-500 text-white'
                   : index === currentStep
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-slate-100 text-slate-400'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary text-muted-foreground'
               )}
             >
               {index < currentStep ? (
@@ -144,7 +143,7 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
             <span
               className={cn(
                 'text-xs mt-2 font-medium hidden sm:block transition-colors duration-300',
-                index <= currentStep ? 'text-slate-900' : 'text-slate-400'
+                index <= currentStep ? 'text-foreground' : 'text-muted-foreground'
               )}
             >
               {step.label}
@@ -154,7 +153,7 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
             <div
               className={cn(
                 'w-8 sm:w-16 md:w-24 h-0.5 mx-2 sm:mx-4 transition-colors duration-300',
-                index < currentStep ? 'bg-emerald-500' : 'bg-slate-200'
+                index < currentStep ? 'bg-emerald-500' : 'bg-border'
               )}
             />
           )}
@@ -177,32 +176,32 @@ function PlanCard({
   return (
     <Card
       className={cn(
-        'relative cursor-pointer transition-all duration-300 hover:border-slate-400',
+        'relative cursor-pointer transition-all duration-300',
         selected
-          ? 'border-2 border-slate-900 shadow-lg'
-          : 'border border-slate-200',
+          ? 'border-2 border-primary shadow-lg shadow-primary/10'
+          : 'border border-border/50 hover:border-border',
         plan.recommended && 'md:-mt-4 md:mb-4'
       )}
       onClick={onSelect}
     >
       {plan.recommended && (
         <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-          <Badge className="bg-slate-900 text-white px-3 py-1">Recommended</Badge>
+          <Badge className="bg-primary text-primary-foreground px-3 py-1">Recommended</Badge>
         </div>
       )}
       <CardHeader className="pb-4">
-        <CardTitle className="text-lg">{plan.name}</CardTitle>
+        <CardTitle className="text-lg text-foreground">{plan.name}</CardTitle>
         <div className="flex items-baseline gap-1">
-          <span className="text-3xl font-bold">{plan.price}</span>
-          <span className="text-slate-500">{plan.period}</span>
+          <span className="text-3xl font-bold text-foreground">{plan.price}</span>
+          <span className="text-muted-foreground">{plan.period}</span>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <ul className="space-y-2">
           {plan.features.map((feature) => (
             <li key={feature} className="flex items-center gap-2 text-sm">
-              <Check className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-              <span>{feature}</span>
+              <Check className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+              <span className="text-muted-foreground">{feature}</span>
             </li>
           ))}
         </ul>
@@ -210,8 +209,8 @@ function PlanCard({
           className={cn(
             'w-full',
             selected
-              ? 'bg-slate-900 hover:bg-slate-800'
-              : 'bg-slate-100 text-slate-900 hover:bg-slate-200'
+              ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+              : 'bg-secondary text-foreground hover:bg-secondary/80'
           )}
           onClick={(e) => {
             e.stopPropagation();
@@ -228,47 +227,54 @@ function PlanCard({
 // Login required component
 function LoginRequired() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-1/4 top-1/3 h-[400px] w-[400px] rounded-full bg-primary/6 blur-[120px]" />
+        <div className="absolute bottom-1/3 right-1/4 h-[300px] w-[300px] rounded-full bg-accent/5 blur-[120px]" />
+      </div>
+
       {/* Header */}
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+      <header className="relative z-10 border-b border-border/40 bg-background/80 backdrop-blur-xl sticky top-0">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-slate-900 flex items-center justify-center">
-            <ChefHat className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">KitchenSync</h1>
-            <p className="text-xs text-slate-500">Business Console</p>
-          </div>
+          <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <ChefHat className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="font-syne text-lg font-bold text-foreground">KitchenSync</h1>
+              <p className="text-xs text-muted-foreground">Business Console</p>
+            </div>
+          </Link>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex items-center justify-center p-4 min-h-[calc(100vh-73px)]">
-        <Card className="w-full max-w-md border-slate-200 shadow-xl">
+      <main className="relative z-10 flex items-center justify-center p-4 min-h-[calc(100vh-65px)]">
+        <Card className="w-full max-w-md border-border/50 bg-card/80 backdrop-blur-sm shadow-xl">
           <CardHeader className="text-center space-y-4">
-            <div className="mx-auto w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center">
-              <LogIn className="h-8 w-8 text-slate-900" />
+            <div className="mx-auto w-16 h-16 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-center">
+              <ChefHat className="h-8 w-8 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-2xl font-bold text-slate-900">Sign In Required</CardTitle>
-              <CardDescription className="text-slate-600 mt-2">
+              <CardTitle className="font-syne text-2xl font-bold text-foreground">Sign In Required</CardTitle>
+              <CardDescription className="text-muted-foreground mt-2">
                 You need to sign in before registering a business
               </CardDescription>
             </div>
           </CardHeader>
 
           <CardContent className="space-y-4">
-            <p className="text-sm text-slate-600 text-center">
+            <p className="text-sm text-muted-foreground text-center">
               Create an account or sign in to continue with your business registration.
             </p>
 
             <div className="space-y-3">
-              <Button asChild className="w-full h-12 bg-slate-900 hover:bg-slate-800">
+              <Button asChild className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90">
                 <Link to="/business/login">Sign In</Link>
               </Button>
-              <p className="text-center text-slate-500 text-sm">
-                Don't have an account? You can create one on the sign in page.
-              </p>
+              <Button asChild variant="outline" className="w-full h-12 border-border text-foreground hover:bg-secondary">
+                <Link to="/business/signup">Create Account</Link>
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -281,7 +287,6 @@ export function RegisterPage() {
   const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuth();
 
-  // Current step (0-3)
   const [step, setStep] = useState(0);
 
   // Step 1: Business Information
@@ -298,17 +303,13 @@ export function RegisterPage() {
   // Step 3: Plan Selection
   const [selectedPlan, setSelectedPlan] = useState<string>('trial');
 
-  // Form validation errors
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Pre-fill owner info from Supabase user
   useEffect(() => {
     if (user) {
-      // Use the user's email for owner email if not already set
       if (!ownerEmail && user.email) {
         setOwnerEmail(user.email);
       }
-      // Try to get the name from user metadata
       const metadata = user.user_metadata;
       if (!ownerName && metadata?.full_name) {
         setOwnerName(metadata.full_name);
@@ -318,7 +319,6 @@ export function RegisterPage() {
     }
   }, [user, ownerEmail, ownerName]);
 
-  // Registration mutation
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterBusinessRequest) => {
       return api.post<RegisterBusinessResponse>('/api/business/register', data);
@@ -336,21 +336,18 @@ export function RegisterPage() {
     },
   });
 
-  // Show loading state while checking auth
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-slate-900" />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  // If user is not logged in, show login required message
   if (!user) {
     return <LoginRequired />;
   }
 
-  // Validation functions
   const validateStep1 = () => {
     const newErrors: Record<string, string> = {};
     if (!businessName.trim()) newErrors.businessName = 'Business name is required';
@@ -370,7 +367,6 @@ export function RegisterPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Navigation handlers
   const handleNext = () => {
     if (step === 0 && !validateStep1()) return;
     if (step === 1 && !validateStep2()) return;
@@ -383,7 +379,6 @@ export function RegisterPage() {
     setStep((prev) => Math.max(prev - 1, 0));
   };
 
-  // Submit handler
   const handleSubmit = () => {
     if (!businessType || !user) return;
 
@@ -399,38 +394,44 @@ export function RegisterPage() {
     });
   };
 
-  // Get business type label
   const getBusinessTypeLabel = (type: string) => {
     return BUSINESS_TYPES.find((t) => t.value === type)?.label || type;
   };
 
-  // Get selected plan details
   const getSelectedPlan = () => {
     return PLANS.find((p) => p.id === selectedPlan);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Background effects */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-1/4 top-1/4 h-[400px] w-[400px] rounded-full bg-primary/5 blur-[120px]" />
+        <div className="absolute bottom-1/4 right-1/4 h-[300px] w-[300px] rounded-full bg-accent/4 blur-[120px]" />
+      </div>
+
       {/* Header */}
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+      <header className="relative z-10 border-b border-border/40 bg-background/80 backdrop-blur-xl sticky top-0">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-slate-900 flex items-center justify-center">
-            <ChefHat className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">KitchenSync</h1>
-            <p className="text-xs text-slate-500">Business Console</p>
-          </div>
+          <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <ChefHat className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="font-syne text-lg font-bold text-foreground">KitchenSync</h1>
+              <p className="text-xs text-muted-foreground">Business Console</p>
+            </div>
+          </Link>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-8 md:py-12">
+      <main className="relative z-10 max-w-4xl mx-auto px-4 py-8 md:py-12">
         <div className="text-center mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">
+          <h2 className="font-syne text-2xl md:text-3xl font-bold text-foreground mb-2">
             Register Your Business
           </h2>
-          <p className="text-slate-600">
+          <p className="text-muted-foreground">
             Join thousands of food businesses using KitchenSync to manage their operations
           </p>
         </div>
@@ -439,32 +440,32 @@ export function RegisterPage() {
         <StepIndicator currentStep={step} />
 
         {/* Form Card */}
-        <Card className="border-0 shadow-xl bg-white">
+        <Card className="border-border/50 shadow-xl bg-card/80 backdrop-blur-sm">
           <CardContent className="p-6 md:p-8">
             {/* Step 1: Business Information */}
             {step === 0 && (
               <div className="space-y-6 animate-in fade-in-0 duration-300">
                 <div className="space-y-2">
-                  <CardTitle className="text-slate-900">Business Information</CardTitle>
-                  <CardDescription className="text-slate-600">
+                  <CardTitle className="text-foreground">Business Information</CardTitle>
+                  <CardDescription className="text-muted-foreground">
                     Tell us about your food business
                   </CardDescription>
                 </div>
 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="businessName" className="text-slate-700">
-                      Business Name <span className="text-red-500">*</span>
+                    <Label htmlFor="businessName" className="text-foreground">
+                      Business Name <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="businessName"
                       placeholder="Enter your business name"
                       value={businessName}
                       onChange={(e) => setBusinessName(e.target.value)}
-                      className={cn('h-12 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400', errors.businessName && 'border-red-500')}
+                      className={cn('h-12 bg-secondary/50 border-border', errors.businessName && 'border-destructive')}
                     />
                     {errors.businessName && (
-                      <p className="text-sm text-red-500 flex items-center gap-1">
+                      <p className="text-sm text-destructive flex items-center gap-1">
                         <AlertCircle className="h-3 w-3" />
                         {errors.businessName}
                       </p>
@@ -472,16 +473,16 @@ export function RegisterPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="businessType" className="text-slate-700">
-                      Business Type <span className="text-red-500">*</span>
+                    <Label htmlFor="businessType" className="text-foreground">
+                      Business Type <span className="text-destructive">*</span>
                     </Label>
                     <Select value={businessType} onValueChange={(val) => setBusinessType(val as BusinessType)}>
-                      <SelectTrigger className={cn('h-12 bg-white border-slate-300 text-slate-900', errors.businessType && 'border-red-500')}>
+                      <SelectTrigger className={cn('h-12 bg-secondary/50 border-border', errors.businessType && 'border-destructive')}>
                         <SelectValue placeholder="Select your business type" />
                       </SelectTrigger>
-                      <SelectContent className="bg-white border-slate-200">
+                      <SelectContent>
                         {BUSINESS_TYPES.map((type) => (
-                          <SelectItem key={type.value} value={type.value} className="text-slate-900">
+                          <SelectItem key={type.value} value={type.value}>
                             <div className="flex items-center gap-2">
                               <type.icon className="h-4 w-4" />
                               {type.label}
@@ -491,7 +492,7 @@ export function RegisterPage() {
                       </SelectContent>
                     </Select>
                     {errors.businessType && (
-                      <p className="text-sm text-red-500 flex items-center gap-1">
+                      <p className="text-sm text-destructive flex items-center gap-1">
                         <AlertCircle className="h-3 w-3" />
                         {errors.businessType}
                       </p>
@@ -499,21 +500,21 @@ export function RegisterPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="description" className="text-slate-700">Description</Label>
+                    <Label htmlFor="description" className="text-foreground">Description</Label>
                     <Textarea
                       id="description"
                       placeholder="Tell customers about your business..."
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       rows={3}
-                      className="resize-none bg-white border-slate-300 text-slate-900 placeholder:text-slate-400"
+                      className="resize-none bg-secondary/50 border-border"
                     />
                   </div>
 
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="email" className="text-slate-700">
-                        Business Email <span className="text-red-500">*</span>
+                      <Label htmlFor="email" className="text-foreground">
+                        Business Email <span className="text-destructive">*</span>
                       </Label>
                       <Input
                         id="email"
@@ -521,10 +522,10 @@ export function RegisterPage() {
                         placeholder="contact@yourbusiness.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className={cn('h-12 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400', errors.email && 'border-red-500')}
+                        className={cn('h-12 bg-secondary/50 border-border', errors.email && 'border-destructive')}
                       />
                       {errors.email && (
-                        <p className="text-sm text-red-500 flex items-center gap-1">
+                        <p className="text-sm text-destructive flex items-center gap-1">
                           <AlertCircle className="h-3 w-3" />
                           {errors.email}
                         </p>
@@ -532,14 +533,14 @@ export function RegisterPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="phone" className="text-slate-700">Phone</Label>
+                      <Label htmlFor="phone" className="text-foreground">Phone</Label>
                       <Input
                         id="phone"
                         type="tel"
                         placeholder="(555) 123-4567"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        className="h-12 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400"
+                        className="h-12 bg-secondary/50 border-border"
                       />
                     </div>
                   </div>
@@ -547,7 +548,7 @@ export function RegisterPage() {
 
                 <div className="flex justify-end pt-4">
                   <Button
-                    className="h-12 px-8 bg-slate-900 hover:bg-slate-800 text-white"
+                    className="h-12 px-8 bg-primary text-primary-foreground hover:bg-primary/90"
                     onClick={handleNext}
                   >
                     Continue
@@ -561,26 +562,26 @@ export function RegisterPage() {
             {step === 1 && (
               <div className="space-y-6 animate-in fade-in-0 duration-300">
                 <div className="space-y-2">
-                  <CardTitle className="text-slate-900">Owner Information</CardTitle>
-                  <CardDescription className="text-slate-600">
+                  <CardTitle className="text-foreground">Owner Information</CardTitle>
+                  <CardDescription className="text-muted-foreground">
                     This account will be the primary administrator
                   </CardDescription>
                 </div>
 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="ownerName" className="text-slate-700">
-                      Full Name <span className="text-red-500">*</span>
+                    <Label htmlFor="ownerName" className="text-foreground">
+                      Full Name <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="ownerName"
                       placeholder="Enter your full name"
                       value={ownerName}
                       onChange={(e) => setOwnerName(e.target.value)}
-                      className={cn('h-12 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400', errors.ownerName && 'border-red-500')}
+                      className={cn('h-12 bg-secondary/50 border-border', errors.ownerName && 'border-destructive')}
                     />
                     {errors.ownerName && (
-                      <p className="text-sm text-red-500 flex items-center gap-1">
+                      <p className="text-sm text-destructive flex items-center gap-1">
                         <AlertCircle className="h-3 w-3" />
                         {errors.ownerName}
                       </p>
@@ -588,8 +589,8 @@ export function RegisterPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="ownerEmail" className="text-slate-700">
-                      Email <span className="text-red-500">*</span>
+                    <Label htmlFor="ownerEmail" className="text-foreground">
+                      Email <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="ownerEmail"
@@ -597,15 +598,15 @@ export function RegisterPage() {
                       placeholder="you@email.com"
                       value={ownerEmail}
                       onChange={(e) => setOwnerEmail(e.target.value)}
-                      className={cn('h-12 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400', errors.ownerEmail && 'border-red-500')}
+                      className={cn('h-12 bg-secondary/50 border-border', errors.ownerEmail && 'border-destructive')}
                     />
                     {errors.ownerEmail && (
-                      <p className="text-sm text-red-500 flex items-center gap-1">
+                      <p className="text-sm text-destructive flex items-center gap-1">
                         <AlertCircle className="h-3 w-3" />
                         {errors.ownerEmail}
                       </p>
                     )}
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted-foreground">
                       This is linked to your signed-in account
                     </p>
                   </div>
@@ -614,14 +615,14 @@ export function RegisterPage() {
                 <div className="flex justify-between pt-4">
                   <Button
                     variant="outline"
-                    className="h-12 px-6 border-slate-300 text-slate-700 hover:bg-slate-100"
+                    className="h-12 px-6 border-border text-foreground hover:bg-secondary"
                     onClick={handleBack}
                   >
                     <ChevronLeft className="mr-2 h-4 w-4" />
                     Back
                   </Button>
                   <Button
-                    className="h-12 px-8 bg-slate-900 hover:bg-slate-800 text-white"
+                    className="h-12 px-8 bg-primary text-primary-foreground hover:bg-primary/90"
                     onClick={handleNext}
                   >
                     Continue
@@ -635,8 +636,8 @@ export function RegisterPage() {
             {step === 2 && (
               <div className="space-y-6 animate-in fade-in-0 duration-300">
                 <div className="space-y-2 text-center">
-                  <CardTitle className="text-slate-900">Choose Your Plan</CardTitle>
-                  <CardDescription className="text-slate-600">
+                  <CardTitle className="text-foreground">Choose Your Plan</CardTitle>
+                  <CardDescription className="text-muted-foreground">
                     Start with a free trial and upgrade anytime
                   </CardDescription>
                 </div>
@@ -655,14 +656,14 @@ export function RegisterPage() {
                 <div className="flex justify-between pt-4">
                   <Button
                     variant="outline"
-                    className="h-12 px-6 border-slate-300 text-slate-700 hover:bg-slate-100"
+                    className="h-12 px-6 border-border text-foreground hover:bg-secondary"
                     onClick={handleBack}
                   >
                     <ChevronLeft className="mr-2 h-4 w-4" />
                     Back
                   </Button>
                   <Button
-                    className="h-12 px-8 bg-slate-900 hover:bg-slate-800 text-white"
+                    className="h-12 px-8 bg-primary text-primary-foreground hover:bg-primary/90"
                     onClick={handleNext}
                   >
                     Review
@@ -676,87 +677,87 @@ export function RegisterPage() {
             {step === 3 && (
               <div className="space-y-6 animate-in fade-in-0 duration-300">
                 <div className="space-y-2">
-                  <CardTitle className="text-slate-900">Review and Confirm</CardTitle>
-                  <CardDescription className="text-slate-600">
+                  <CardTitle className="text-foreground">Review and Confirm</CardTitle>
+                  <CardDescription className="text-muted-foreground">
                     Please review your information before creating your account
                   </CardDescription>
                 </div>
 
                 <div className="space-y-4">
                   {/* Business Information Summary */}
-                  <div className="bg-slate-50 rounded-xl p-6">
-                    <h4 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                      <Building2 className="h-5 w-5" />
+                  <div className="bg-secondary/30 border border-border/30 rounded-xl p-6">
+                    <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                      <Building2 className="h-5 w-5 text-primary" />
                       Business Information
                     </h4>
                     <div className="grid sm:grid-cols-2 gap-4 text-sm">
                       <div>
-                        <span className="text-slate-500">Business Name</span>
-                        <p className="font-medium text-slate-900">{businessName}</p>
+                        <span className="text-muted-foreground">Business Name</span>
+                        <p className="font-medium text-foreground">{businessName}</p>
                       </div>
                       <div>
-                        <span className="text-slate-500">Business Type</span>
-                        <p className="font-medium text-slate-900">
+                        <span className="text-muted-foreground">Business Type</span>
+                        <p className="font-medium text-foreground">
                           {getBusinessTypeLabel(businessType)}
                         </p>
                       </div>
                       <div>
-                        <span className="text-slate-500">Email</span>
-                        <p className="font-medium text-slate-900">{email}</p>
+                        <span className="text-muted-foreground">Email</span>
+                        <p className="font-medium text-foreground">{email}</p>
                       </div>
-                      {phone && (
+                      {phone ? (
                         <div>
-                          <span className="text-slate-500">Phone</span>
-                          <p className="font-medium text-slate-900">{phone}</p>
+                          <span className="text-muted-foreground">Phone</span>
+                          <p className="font-medium text-foreground">{phone}</p>
                         </div>
-                      )}
-                      {description && (
+                      ) : null}
+                      {description ? (
                         <div className="sm:col-span-2">
-                          <span className="text-slate-500">Description</span>
-                          <p className="font-medium text-slate-900">{description}</p>
+                          <span className="text-muted-foreground">Description</span>
+                          <p className="font-medium text-foreground">{description}</p>
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   </div>
 
                   {/* Owner Information Summary */}
-                  <div className="bg-slate-50 rounded-xl p-6">
-                    <h4 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                      <User className="h-5 w-5" />
+                  <div className="bg-secondary/30 border border-border/30 rounded-xl p-6">
+                    <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                      <User className="h-5 w-5 text-primary" />
                       Owner Information
                     </h4>
                     <div className="grid sm:grid-cols-2 gap-4 text-sm">
                       <div>
-                        <span className="text-slate-500">Name</span>
-                        <p className="font-medium text-slate-900">{ownerName}</p>
+                        <span className="text-muted-foreground">Name</span>
+                        <p className="font-medium text-foreground">{ownerName}</p>
                       </div>
                       <div>
-                        <span className="text-slate-500">Email</span>
-                        <p className="font-medium text-slate-900">{ownerEmail}</p>
+                        <span className="text-muted-foreground">Email</span>
+                        <p className="font-medium text-foreground">{ownerEmail}</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Plan Summary */}
-                  <div className="bg-slate-50 rounded-xl p-6">
-                    <h4 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                      <CreditCard className="h-5 w-5" />
+                  <div className="bg-secondary/30 border border-border/30 rounded-xl p-6">
+                    <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                      <CreditCard className="h-5 w-5 text-primary" />
                       Selected Plan
                     </h4>
                     {getSelectedPlan() && (
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-medium text-slate-900">
+                          <p className="font-medium text-foreground">
                             {getSelectedPlan()!.name}
                           </p>
-                          <p className="text-sm text-slate-500">
+                          <p className="text-sm text-muted-foreground">
                             {getSelectedPlan()!.price} {getSelectedPlan()!.period}
                           </p>
                         </div>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-slate-700 hover:text-slate-900 hover:bg-slate-100"
+                          className="text-primary hover:text-primary/80 hover:bg-primary/10"
                           onClick={() => setStep(2)}
                         >
                           Change
@@ -766,24 +767,24 @@ export function RegisterPage() {
                   </div>
                 </div>
 
-                {registerMutation.error && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-                    <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                {registerMutation.error ? (
+                  <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-medium text-red-800">Registration failed</p>
-                      <p className="text-sm text-red-600">
+                      <p className="font-medium text-foreground">Registration failed</p>
+                      <p className="text-sm text-muted-foreground">
                         {registerMutation.error instanceof Error
                           ? registerMutation.error.message
                           : 'Please try again or contact support.'}
                       </p>
                     </div>
                   </div>
-                )}
+                ) : null}
 
                 <div className="flex justify-between pt-4">
                   <Button
                     variant="outline"
-                    className="h-12 px-6 border-slate-300 text-slate-700 hover:bg-slate-100"
+                    className="h-12 px-6 border-border text-foreground hover:bg-secondary"
                     onClick={handleBack}
                     disabled={registerMutation.isPending}
                   >
@@ -791,7 +792,7 @@ export function RegisterPage() {
                     Back
                   </Button>
                   <Button
-                    className="h-12 px-8 bg-slate-900 hover:bg-slate-800 text-white"
+                    className="h-12 px-8 bg-primary text-primary-foreground hover:bg-primary/90"
                     onClick={handleSubmit}
                     disabled={registerMutation.isPending}
                   >
@@ -814,9 +815,9 @@ export function RegisterPage() {
         </Card>
 
         {/* Footer */}
-        <p className="text-center text-slate-500 text-sm mt-8">
+        <p className="text-center text-muted-foreground text-sm mt-8">
           Already have a business account?{' '}
-          <Link to="/business/login" className="text-slate-900 font-medium hover:underline">
+          <Link to="/business/login" className="text-primary font-medium hover:underline">
             Sign in
           </Link>
         </p>

@@ -71,37 +71,38 @@ export function HowItWorksSection() {
         {/* Steps */}
         <div className="space-y-6 md:space-y-0 md:grid md:grid-cols-3 md:gap-8">
           {steps.map((step, index) => (
-            <motion.div
-              key={step.number}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-50px' }}
-              transition={{ duration: 0.5, delay: index * 0.15 }}
-              className={`relative rounded-xl border ${step.borderColor} bg-card/60 p-8 hover:shadow-xl ${step.glowColor} transition-all duration-300`}
-            >
-              {/* Step number */}
-              <span className="font-syne text-5xl font-bold text-foreground/5 absolute top-4 right-6">
-                {step.number}
-              </span>
-
-              <div
-                className={`w-12 h-12 rounded-xl ${step.bg} flex items-center justify-center mb-5`}
+            <Link to="/business/signup" key={step.number} className="block">
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-50px' }}
+                transition={{ duration: 0.5, delay: index * 0.15 }}
+                className={`relative rounded-xl border ${step.borderColor} bg-card/60 p-8 hover:shadow-xl ${step.glowColor} transition-all duration-300 cursor-pointer hover:border-primary/40 h-full`}
               >
-                <step.icon className={`h-6 w-6 ${step.color}`} />
-              </div>
+                {/* Step number */}
+                <span className="font-syne text-5xl font-bold text-foreground/5 absolute top-4 right-6">
+                  {step.number}
+                </span>
 
-              <h3 className="font-syne text-xl font-bold text-foreground mb-3">
-                {step.title}
-              </h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {step.description}
-              </p>
+                <div
+                  className={`w-12 h-12 rounded-xl ${step.bg} flex items-center justify-center mb-5`}
+                >
+                  <step.icon className={`h-6 w-6 ${step.color}`} />
+                </div>
 
-              {/* Connector line (desktop) */}
-              {index < steps.length - 1 ? (
-                <div className="hidden md:block absolute top-1/2 -right-4 w-8 border-t border-dashed border-border/50" />
-              ) : null}
-            </motion.div>
+                <h3 className="font-syne text-xl font-bold text-foreground mb-3">
+                  {step.title}
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {step.description}
+                </p>
+
+                {/* Connector line (desktop) */}
+                {index < steps.length - 1 ? (
+                  <div className="hidden md:block absolute top-1/2 -right-4 w-8 border-t border-dashed border-border/50" />
+                ) : null}
+              </motion.div>
+            </Link>
           ))}
         </div>
 
