@@ -20,6 +20,12 @@ import {
   Sparkles,
 } from 'lucide-react';
 
+function formatTime(val: unknown): string {
+  if (val == null || val === '') return '';
+  const s = String(val);
+  return /^\d+$/.test(s) ? `${s} min` : s;
+}
+
 const CATEGORIES = [
   'All',
   'Breakfast',

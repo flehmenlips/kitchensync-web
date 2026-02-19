@@ -18,6 +18,12 @@ import {
   SortAsc,
 } from 'lucide-react';
 
+function formatTime(val: unknown): string {
+  if (val == null || val === '') return '';
+  const s = String(val);
+  return /^\d+$/.test(s) ? `${s} min` : s;
+}
+
 export function RecipesPage() {
   const { user } = useCustomerAuth();
   const [search, setSearch] = useState('');
