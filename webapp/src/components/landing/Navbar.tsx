@@ -52,6 +52,9 @@ export function Navbar() {
           {/* Desktop CTAs */}
           <div className="hidden md:flex items-center gap-3">
             <Button variant="ghost" size="sm" asChild>
+              <Link to="/app">Open App</Link>
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
               <Link to="/business/login">Business Login</Link>
             </Button>
             <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" asChild>
@@ -87,6 +90,9 @@ export function Navbar() {
             </button>
           ))}
           <div className="pt-3 space-y-2 border-t border-border/40 mt-2">
+            <Button variant="outline" size="sm" className="w-full" asChild>
+              <Link to="/app">Open App</Link>
+            </Button>
             <Button variant="outline" size="sm" className="w-full" asChild>
               <Link to="/business/login">Business Login</Link>
             </Button>

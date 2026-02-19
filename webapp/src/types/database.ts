@@ -189,6 +189,261 @@ export interface CreatorEarning {
   created_at: string;
 }
 
+// =============================================
+// Customer / Social Types (used by customer web app & iOS)
+// =============================================
+
+export type ListType =
+  | 'prep'
+  | 'shopping'
+  | 'todo'
+  | 'recipe_ideas'
+  | 'wishlist'
+  | 'event_planning'
+  | 'equipment_needs'
+  | 'delegated_tasks'
+  | 'custom';
+
+export type ListItemStatus = 'pending' | 'in_progress' | 'completed' | 'skipped';
+export type ListItemPriority = 'high' | 'medium' | 'low';
+
+export interface CustomerRecipe {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  prep_time: number | null;
+  cook_time: number | null;
+  servings: number | null;
+  difficulty: RecipeDifficulty | null;
+  image_url: string | null;
+  is_ai_generated: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Ingredient {
+  id: string;
+  recipe_id: string;
+  content: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface Instruction {
+  id: string;
+  recipe_id: string;
+  content: string;
+  step_number: number;
+  created_at: string;
+}
+
+export interface RecipePhoto {
+  id: string;
+  recipe_id: string;
+  url: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface RecipeTag {
+  recipe_id: string;
+  tag_id: string;
+}
+
+export interface Tag {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
+export interface UserList {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  list_type: ListType;
+  tags: string[];
+  is_completed: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ListItem {
+  id: string;
+  list_id: string;
+  content: string;
+  status: ListItemStatus;
+  priority: ListItemPriority | null;
+  section: string | null;
+  estimated_time: string | null;
+  quantity: string | null;
+  unit: string | null;
+  assigned_to: string | null;
+  notes: string | null;
+  percent_complete: number | null;
+  recipe_id: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserMenu {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  occasion: string | null;
+  guest_count: number | null;
+  date: string | null;
+  is_ai_generated: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserMenuItem {
+  id: string;
+  menu_id: string;
+  course_name: string;
+  item_name: string;
+  item_description: string | null;
+  recipe_id: string | null;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface InboxItem {
+  id: string;
+  user_id: string;
+  text: string;
+  created_at: string;
+}
+
+// Social types
+export interface UserFollow {
+  id: string;
+  follower_id: string;
+  following_id: string;
+  created_at: string;
+}
+
+export interface FollowRequest {
+  id: string;
+  requester_id: string;
+  target_id: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  created_at: string;
+}
+
+export interface UserSharedRecipe {
+  id: string;
+  user_id: string;
+  recipe_id: string;
+  title: string;
+  description: string | null;
+  image_url: string | null;
+  image_urls: string[];
+  ingredients: string[];
+  instructions: string[];
+  prep_time: number | null;
+  cook_time: number | null;
+  servings: number | null;
+  difficulty: RecipeDifficulty | null;
+  tags: string[];
+  is_public: boolean;
+  like_count: number;
+  comment_count: number;
+  repost_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RecipeComment {
+  id: string;
+  recipe_id: string;
+  user_id: string;
+  parent_id: string | null;
+  content: string;
+  like_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CommentLike {
+  id: string;
+  comment_id: string;
+  user_id: string;
+  created_at: string;
+}
+
+export interface UserNotification {
+  id: string;
+  user_id: string;
+  type: 'follow' | 'like' | 'comment' | 'mention' | 'repost' | 'new_recipe' | 'follow_request';
+  actor_id: string | null;
+  target_type: string | null;
+  target_id: string | null;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface BusinessAccount {
+  id: string;
+  owner_user_id: string;
+  business_name: string;
+  business_type: string;
+  slug: string;
+  email: string | null;
+  phone: string | null;
+  website_url: string | null;
+  address_line1: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  country: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  logo_url: string | null;
+  cover_image_url: string | null;
+  brand_color: string | null;
+  description: string | null;
+  is_verified: boolean;
+  is_active: boolean;
+  is_featured: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BusinessHours {
+  id: string;
+  business_id: string;
+  day_of_week: number;
+  open_time: string;
+  close_time: string;
+  is_closed: boolean;
+  notes: string | null;
+}
+
+// Extended user profile with all fields for customer app
+export interface CustomerUserProfile {
+  id: string;
+  user_id: string;
+  display_name: string | null;
+  kitchen_name: string | null;
+  avatar_url: string | null;
+  measurement_system: string | null;
+  prefer_weight_over_volume: boolean;
+  temperature_unit: string | null;
+  show_nutritional_info: boolean;
+  default_servings: number | null;
+  enable_cooking_timers: boolean;
+  enable_shopping_reminders: boolean;
+  account_type: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // Database schema type for Supabase client
 export interface Database {
   public: {
