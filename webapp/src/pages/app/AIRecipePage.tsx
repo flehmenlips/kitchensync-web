@@ -19,6 +19,12 @@ import {
   Wand2,
 } from 'lucide-react';
 
+function formatTime(val: unknown): string {
+  if (val == null || val === '') return '';
+  const s = String(val);
+  return /^\d+$/.test(s) ? `${s} min` : s;
+}
+
 export function AIRecipePage() {
   const navigate = useNavigate();
   const { user } = useCustomerAuth();
@@ -208,8 +214,8 @@ export function AIRecipePage() {
                 <p className="text-sm text-muted-foreground">{generatedRecipe.description}</p>
               )}
               <div className="flex gap-3 text-sm text-muted-foreground">
-                {generatedRecipe.prep_time && <span>Prep: {generatedRecipe.prep_time}m</span>}
-                {generatedRecipe.cook_time && <span>Cook: {generatedRecipe.cook_time}m</span>}
+                {generatedRecipe.prep_time && <span>Prep: {formatTime(generatedRecipe.prep_time)}</span>}
+                {generatedRecipe.cook_time && <span>Cook: {formatTime(generatedRecipe.cook_time)}</span>}
                 {generatedRecipe.servings && <span>Serves {generatedRecipe.servings}</span>}
                 {generatedRecipe.difficulty && (
                   <Badge variant="secondary" className="capitalize text-[10px]">{generatedRecipe.difficulty}</Badge>

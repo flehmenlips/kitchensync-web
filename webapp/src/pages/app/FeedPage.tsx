@@ -19,6 +19,12 @@ import {
   Loader2,
 } from 'lucide-react';
 
+function formatTime(val: unknown): string {
+  if (val == null || val === '') return '';
+  const s = String(val);
+  return /^\d+$/.test(s) ? `${s} min` : s;
+}
+
 const PAGE_SIZE = 10;
 
 async function fetchFeedPage(tab: string, user: any, cursor?: string) {
@@ -288,8 +294,8 @@ function FeedCard({ item }: { item: any }) {
           {/* Meta */}
           {(item.prep_time || item.cook_time || item.servings) && (
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              {item.prep_time && <span>Prep: {item.prep_time}m</span>}
-              {item.cook_time && <span>Cook: {item.cook_time}m</span>}
+              {item.prep_time && <span>Prep: {formatTime(item.prep_time)}</span>}
+              {item.cook_time && <span>Cook: {formatTime(item.cook_time)}</span>}
               {item.servings && <span>Serves {item.servings}</span>}
             </div>
           )}

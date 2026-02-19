@@ -22,6 +22,12 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+function formatTime(val: unknown): string {
+  if (val == null || val === '') return '';
+  const s = String(val);
+  return /^\d+$/.test(s) ? `${s} min` : s;
+}
+
 export function RecipeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -198,13 +204,13 @@ export function RecipeDetailPage() {
           {recipe.prep_time && (
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <Clock className="h-4 w-4" />
-              <span>Prep: {recipe.prep_time}m</span>
+              <span>Prep: {formatTime(recipe.prep_time)}</span>
             </div>
           )}
           {recipe.cook_time && (
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <Clock className="h-4 w-4" />
-              <span>Cook: {recipe.cook_time}m</span>
+              <span>Cook: {formatTime(recipe.cook_time)}</span>
             </div>
           )}
           {recipe.servings && (

@@ -148,7 +148,7 @@ export function RecipesPage() {
                     {(recipe.prep_time || recipe.cook_time) && (
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        {(recipe.prep_time || 0) + (recipe.cook_time || 0)}m
+                        {(Number(recipe.prep_time) || 0) + (Number(recipe.cook_time) || 0)} min
                       </span>
                     )}
                     {recipe.servings && (
