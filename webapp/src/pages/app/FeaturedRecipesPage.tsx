@@ -224,7 +224,7 @@ export function FeaturedRecipesPage() {
                         {(recipe?.prep_time || recipe?.cook_time) && (
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {(Number(recipe.prep_time) || 0) + (Number(recipe.cook_time) || 0)} min
+                            {[recipe.prep_time && formatTime(recipe.prep_time), recipe.cook_time && formatTime(recipe.cook_time)].filter(Boolean).join(' + ')}
                           </span>
                         )}
                         {recipe?.servings && (
