@@ -23,7 +23,7 @@ import {
   Star,
 } from 'lucide-react';
 
-function formatTime(val: unknown): string {
+function formatDuration(val: unknown): string {
   if (val == null || val === '') return '';
   const s = String(val);
   return /^\d+$/.test(s) ? `${s} min` : s;
@@ -330,8 +330,8 @@ export function CommunityRecipePage() {
         )}
 
         <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-          {recipe.prep_time && <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Prep: {formatTime(recipe.prep_time)}</span>}
-          {recipe.cook_time && <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Cook: {formatTime(recipe.cook_time)}</span>}
+          {recipe.prep_time && <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Prep: {formatDuration(recipe.prep_time)}</span>}
+          {recipe.cook_time && <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Cook: {formatDuration(recipe.cook_time)}</span>}
           {recipe.servings && <span className="flex items-center gap-1"><UsersIcon className="h-3.5 w-3.5" /> {recipe.servings} servings</span>}
           {recipe.difficulty && <Badge variant="secondary" className="capitalize">{recipe.difficulty}</Badge>}
         </div>
