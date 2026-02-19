@@ -242,6 +242,7 @@ function CustomerAppRoutes() {
           <Route path="lists" element={<Suspense fallback={<LoadingSpinner />}><CustomerListsPage /></Suspense>} />
           <Route path="lists/:id" element={<Suspense fallback={<LoadingSpinner />}><CustomerListDetailPage /></Suspense>} />
           <Route path="menus" element={<Suspense fallback={<LoadingSpinner />}><CustomerMenusPage /></Suspense>} />
+          <Route path="menus/ai" element={<Suspense fallback={<LoadingSpinner />}><CustomerAIMenuPage /></Suspense>} />
           <Route path="menus/:id" element={<Suspense fallback={<LoadingSpinner />}><CustomerMenuDetailPage /></Suspense>} />
           <Route path="me" element={<Suspense fallback={<LoadingSpinner />}><CustomerProfilePage /></Suspense>} />
           <Route path="me/settings" element={<Suspense fallback={<LoadingSpinner />}><CustomerSettingsPage /></Suspense>} />
@@ -261,7 +262,6 @@ function CustomerAppRoutes() {
           <Route path="followers" element={<Suspense fallback={<LoadingSpinner />}><CustomerFollowersPage /></Suspense>} />
           <Route path="follow-requests" element={<Suspense fallback={<LoadingSpinner />}><CustomerFollowRequestsPage /></Suspense>} />
           <Route path="inbox" element={<Suspense fallback={<LoadingSpinner />}><CustomerInboxPage /></Suspense>} />
-          <Route path="menus/ai" element={<Suspense fallback={<LoadingSpinner />}><CustomerAIMenuPage /></Suspense>} />
           <Route path="assets" element={<Suspense fallback={<LoadingSpinner />}><CustomerAssetLibraryPage /></Suspense>} />
           <Route path="featured" element={<Suspense fallback={<LoadingSpinner />}><CustomerFeaturedRecipesPage /></Suspense>} />
         </Route>

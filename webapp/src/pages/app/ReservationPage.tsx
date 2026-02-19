@@ -96,12 +96,12 @@ export function ReservationPage() {
       return slots;
     }
     const dayOfWeek = new Date(date + 'T12:00:00').getDay();
-    const todayHours = hours.find((h: any) => h.dayOfWeek === dayOfWeek);
-    if (!todayHours || todayHours.isClosed) return [];
+    const todayHours = hours.find((h: any) => h.day_of_week === dayOfWeek);
+    if (!todayHours || todayHours.is_closed) return [];
 
     const slots: string[] = [];
-    const open = todayHours.openTime || '11:00';
-    const close = todayHours.closeTime || '22:00';
+    const open = todayHours.open_time || '11:00';
+    const close = todayHours.close_time || '22:00';
     const [openH, openM] = open.split(':').map(Number);
     const [closeH, closeM] = close.split(':').map(Number);
     const interval = settings?.slot_duration_minutes || 30;

@@ -24,13 +24,10 @@ Shared conventions for API communication between backend and frontend.
 </response_envelope>
 
 <auth_cors>
-  Better Auth trustedOrigins (string wildcards):
-  ["http://localhost:*", "http://127.0.0.1:*", "https://*.dev.vibecode.run", "https://*.vibecode.run", "https://*.vibecodeapp.com"]
+  Allowed origins:
+  ["http://localhost:*", "http://127.0.0.1:*", "https://www.cookbook.farm", "https://cookbook.farm"]
 
-  WRONG: RegExp objects or returning boolean - crashes origin trust.
-  RIGHT: String array with * wildcards.
-
-  CORS middleware (separate from trustedOrigins): echo specific origin, not "*".
+  CORS middleware: echo specific origin, not "*".
   Browsers reject "*" with credentials: "include".
 </auth_cors>
 
