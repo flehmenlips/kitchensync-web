@@ -51,16 +51,16 @@ export function FollowRequestsPage() {
   const approveMutation = useMutation({
     mutationFn: async (requestId: string) => {
       const request = requests?.find(r => r.id === requestId);
-      if (!request || !user) return;
+      if (!request || !user) throw new Error('Request not found');
 
-      // Update request status
-      await supabase.from('follow_requests').update({ status: 'approved' }).eq('id', requestId);
+      const { error: updateErr } = await supabase.from('follow_requests').update({ status: 'approved' }).eq('id', requestId);
+      if (updateErr) throw updateErr;
 
-      // Create the follow relationship
-      await supabase.from('user_follows').insert({
+      const { error: insertErr } = await supabase.from('user_follows').insert({
         follower_id: request.requester_id,
         following_id: user.id,
       });
+      if (insertErr) throw insertErr;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['follow-requests'] });

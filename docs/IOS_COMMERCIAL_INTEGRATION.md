@@ -4,7 +4,7 @@
 
 This document provides the iOS development team with specifications for implementing the consumer-facing commercial features in the KitchenSync mobile app. The backend API is fully implemented and ready for integration.
 
-**Backend Base URL:** Use the `BACKEND_URL` environment variable (e.g., `https://[id].vibecode.run`)
+**Backend Base URL:** Use the `BACKEND_URL` environment variable (e.g., `https://kitchensync-backend-2h5n.onrender.com`)
 
 ---
 

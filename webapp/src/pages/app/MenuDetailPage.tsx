@@ -82,11 +82,12 @@ export function MenuDetailPage() {
     mutationFn: async () => {
       if (!id) throw new Error('No menu');
       const course = selectedCourse || newCourse.trim() || 'Main Course';
+      const maxSort = items?.reduce((max, i: any) => Math.max(max, i.sort_order ?? 0), -1) ?? -1;
       const { error } = await supabase.from('menu_items').insert({
         menu_id: id,
         course_name: course,
         item_name: newItemName.trim(),
-        sort_order: (items?.length || 0),
+        sort_order: maxSort + 1,
       });
       if (error) throw error;
     },

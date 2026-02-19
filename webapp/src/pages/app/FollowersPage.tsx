@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -18,10 +18,12 @@ import {
 
 export function FollowersPage() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const { user } = useCustomerAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<'followers' | 'following'>('followers');
+  const initialTab = searchParams.get('tab') === 'following' ? 'following' : 'followers';
+  const [tab, setTab] = useState<'followers' | 'following'>(initialTab);
 
   const targetUserId = id || user?.id;
 

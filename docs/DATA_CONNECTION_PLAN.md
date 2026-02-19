@@ -128,7 +128,7 @@ This combines the benefits of both:
 ## Recommended Approach: Option A (Short-term) + Option B (Long-term)
 
 ### Phase 1: Quick Connection (Now)
-1. **Verify iOS app backend URL** - Ensure it points to the Vibecode backend
+1. **Verify iOS app backend URL** - Ensure it points to the KitchenSync backend
 2. **Add CORS for iOS** - Allow mobile app origin
 3. **Test API calls** - Verify businesses, menu, reservations work
 
@@ -147,7 +147,7 @@ This combines the benefits of both:
 ### 1. Check iOS App Configuration
 The iOS app should be configured to call the same backend:
 ```
-BACKEND_URL=https://[vibecode-id].vibecode.run
+BACKEND_URL=https://kitchensync-backend-2h5n.onrender.com
 ```
 
 ### 2. Verify CORS Settings
@@ -155,8 +155,7 @@ In `backend/src/index.ts`, ensure mobile origins are allowed:
 ```typescript
 const allowedOrigins = [
   'http://localhost:*',
-  'https://*.vibecode.run',
-  'https://*.vibecodeapp.com',
+  'https://*.cookbook.farm',
   // iOS app origin if needed
 ];
 ```

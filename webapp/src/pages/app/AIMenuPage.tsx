@@ -99,16 +99,16 @@ export function AIMenuPage() {
 
       if (menuError) throw menuError;
 
-      // Add menu items
-      const items: { menu_id: string; name: string; description: string; course: string; sort_order: number }[] = [];
+      const items: { menu_id: string; item_name: string; item_description: string; course_name: string; sort_order: number }[] = [];
+      let sortOrder = 0;
       generatedMenu.courses.forEach((course) => {
-        course.items.forEach((item, idx) => {
+        course.items.forEach((item) => {
           items.push({
             menu_id: menu.id,
-            name: item.name,
-            description: item.description || '',
-            course: course.name,
-            sort_order: idx,
+            item_name: item.name,
+            item_description: item.description || '',
+            course_name: course.name,
+            sort_order: sortOrder++,
           });
         });
       });

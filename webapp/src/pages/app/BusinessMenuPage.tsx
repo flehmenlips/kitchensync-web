@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -38,15 +38,15 @@ export function BusinessMenuPage() {
 
   const { data: menuData, isLoading } = useQuery({
     queryKey: ['business-menu-order', id],
-    queryFn: async () => {
-      const data = await api.get<any>(`/api/menu/${id}/public`);
-      if (data?.categories?.length > 0 && !activeCategory) {
-        setActiveCategory(data.categories[0].id);
-      }
-      return data;
-    },
+    queryFn: async () => api.get<any>(`/api/menu/${id}/public`),
     enabled: !!id,
   });
+
+  useEffect(() => {
+    if (menuData?.categories?.length > 0 && !activeCategory) {
+      setActiveCategory(menuData.categories[0].id);
+    }
+  }, [menuData]);
 
   const addToCart = (item: any) => {
     setCart(prev => {

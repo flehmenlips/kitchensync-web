@@ -2,7 +2,7 @@
 
 > **For: iOS Development Team**
 > **Platform:** KitchenSync - Social Culinary Platform
-> **Admin Console:** kitchensync.vibecode.run
+> **Admin Console:** www.cookbook.farm
 > **Last Updated:** February 2026
 
 ---
@@ -49,7 +49,7 @@ iOS App (Swift/SwiftUI)
 
 1. **Primary data access** is through the **Supabase Client SDK** with Row Level Security (RLS). The iOS app should use the `supabase-swift` SDK to query tables directly.
 2. **Authentication** is handled by **Supabase Auth** (email/password, with potential OAuth expansion).
-3. **Admin operations** go through the **backend API** at `https://kitchensync.vibecode.run` but regular user operations go directly through Supabase.
+3. **Admin operations** go through the **backend API** at `https://kitchensync-backend-2h5n.onrender.com` but regular user operations go directly through Supabase.
 4. **RLS enforces authorization** at the database level - the iOS app doesn't need to implement most access control logic.
 5. **Payments** use **Stripe Connect** for creator marketplace transactions.
 
@@ -705,7 +705,7 @@ key (TEXT PK), value (JSONB), updated_by (UUID), updated_at (TIMESTAMPTZ)
 
 ## 4. API Endpoints (Backend Server)
 
-**Base URL:** `https://kitchensync.vibecode.run`
+**Base URL:** `https://kitchensync-backend-2h5n.onrender.com`
 
 ### Health Check
 ```
@@ -1402,7 +1402,7 @@ iOS App                     Backend                      Stripe
 
 | Variable | Value |
 |----------|-------|
-| **Backend URL (Prod)** | `https://kitchensync.vibecode.run` |
+| **Backend URL (Prod)** | `https://kitchensync-backend-2h5n.onrender.com` |
 | **Backend URL (Dev)** | `http://localhost:3000` |
 
 ### CORS
@@ -1410,8 +1410,7 @@ iOS App                     Backend                      Stripe
 The backend allows these origins:
 - `http://localhost:*`
 - `http://127.0.0.1:*`
-- `https://*.dev.vibecode.run`
-- `https://*.vibecode.run`
+- `https://*.cookbook.farm`
 
 For the iOS app, requests to the backend should include `credentials: include` equivalent (cookies). The Supabase SDK handles its own authentication headers.
 

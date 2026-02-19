@@ -2,7 +2,7 @@
 
 > **Consolidated Reference Document for Admin Dashboard Development**
 > This document combines all schema, roadmap, and API specifications for the KitchenSync platform.
-> Target: kitchensync.vibecode.run (Admin Web Console)
+> Target: www.cookbook.farm (Admin Web Console)
 > Last Updated: February 2026
 
 ---

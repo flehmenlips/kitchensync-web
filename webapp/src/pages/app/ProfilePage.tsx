@@ -92,7 +92,7 @@ export function ProfilePage() {
             <p className="text-muted-foreground text-xs">Followers</p>
           </Link>
           <Separator orientation="vertical" className="h-8" />
-          <Link to="/app/followers" className="text-center hover:opacity-80 transition-opacity">
+          <Link to="/app/followers?tab=following" className="text-center hover:opacity-80 transition-opacity">
             <p className="font-semibold text-foreground">{stats?.following || 0}</p>
             <p className="text-muted-foreground text-xs">Following</p>
           </Link>

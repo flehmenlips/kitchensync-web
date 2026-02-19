@@ -51,11 +51,10 @@ async function fetchFeedPage(tab: string, user: any, cursor?: string) {
     .eq('is_public', true)
     .limit(PAGE_SIZE);
 
-  if (tab === 'foryou') {
-    query = query.order('like_count', { ascending: false }).order('created_at', { ascending: false });
-  } else {
-    query = query.order('created_at', { ascending: false });
-  }
+  // Both tabs paginate by created_at for stable cursor-based pagination.
+  // "For You" uses a secondary sort by like_count within each page for variety,
+  // but the cursor must match the primary sort column.
+  query = query.order('created_at', { ascending: false });
 
   if (followingIds) {
     query = query.in('user_id', followingIds);
@@ -88,7 +87,7 @@ async function fetchFeedPage(tab: string, user: any, cursor?: string) {
   const likedIds = new Set((likeData.data || []).map((l: any) => l.shared_recipe_id));
   const savedIds = new Set((saveData.data || []).map((s: any) => s.shared_recipe_id));
 
-  const items = data.map(item => {
+  let items = data.map(item => {
     const recipe = item.recipe;
     return {
       ...item,
@@ -105,6 +104,11 @@ async function fetchFeedPage(tab: string, user: any, cursor?: string) {
       isSaved: savedIds.has(item.id),
     };
   });
+
+  // "For You": sort each page by popularity client-side
+  if (tab === 'foryou') {
+    items.sort((a, b) => (b.like_count || 0) - (a.like_count || 0));
+  }
 
   const nextCursor = data.length === PAGE_SIZE ? data[data.length - 1].created_at : null;
   return { items, nextCursor };
@@ -203,27 +207,40 @@ function FeedCard({ item }: { item: any }) {
   const [likeCount, setLikeCount] = useState(item.like_count || 0);
   const [saved, setSaved] = useState(item.isSaved || false);
 
+  // Sync local state when props change (e.g. feed refetch)
+  useEffect(() => { setLiked(item.isLiked || false); }, [item.isLiked]);
+  useEffect(() => { setLikeCount(item.like_count || 0); }, [item.like_count]);
+  useEffect(() => { setSaved(item.isSaved || false); }, [item.isSaved]);
+
   const likeMutation = useMutation({
     mutationFn: async () => {
       if (!user) return;
       if (liked) {
         await supabase.from('recipe_likes').delete()
           .eq('user_id', user.id).eq('shared_recipe_id', item.id);
-        // Decrement count on shared recipe
-        await supabase.from('user_shared_recipes').update({ like_count: Math.max(0, likeCount - 1) }).eq('id', item.id);
+        // Use actual count from server to avoid drift
+        const { data: fresh } = await supabase.from('user_shared_recipes').select('like_count').eq('id', item.id).single();
+        const serverCount = fresh?.like_count ?? likeCount;
+        await supabase.from('user_shared_recipes').update({ like_count: Math.max(0, serverCount - 1) }).eq('id', item.id);
       } else {
         await supabase.from('recipe_likes').insert({ user_id: user.id, shared_recipe_id: item.id });
-        await supabase.from('user_shared_recipes').update({ like_count: likeCount + 1 }).eq('id', item.id);
+        const { data: fresh } = await supabase.from('user_shared_recipes').select('like_count').eq('id', item.id).single();
+        const serverCount = fresh?.like_count ?? likeCount;
+        await supabase.from('user_shared_recipes').update({ like_count: serverCount + 1 }).eq('id', item.id);
       }
     },
     onMutate: () => {
-      // Optimistic update
+      const prevLiked = liked;
+      const prevCount = likeCount;
       setLiked(!liked);
       setLikeCount(liked ? Math.max(0, likeCount - 1) : likeCount + 1);
+      return { prevLiked, prevCount };
     },
-    onError: () => {
-      setLiked(!liked);
-      setLikeCount(liked ? likeCount + 1 : Math.max(0, likeCount - 1));
+    onError: (_err: unknown, _vars: unknown, context: { prevLiked: boolean; prevCount: number } | undefined) => {
+      if (context) {
+        setLiked(context.prevLiked);
+        setLikeCount(context.prevCount);
+      }
     },
   });
 
@@ -237,10 +254,16 @@ function FeedCard({ item }: { item: any }) {
         await supabase.from('recipe_saves').insert({ user_id: user.id, shared_recipe_id: item.id });
       }
     },
-    onMutate: () => { setSaved(!saved); },
-    onError: () => { setSaved(!saved); },
-    onSuccess: () => {
-      toast.success(saved ? 'Removed from saved' : 'Saved to collection');
+    onMutate: () => {
+      const wasSaved = saved;
+      setSaved(!saved);
+      return { wasSaved };
+    },
+    onError: (_err: unknown, _vars: unknown, context: { wasSaved: boolean } | undefined) => {
+      if (context) setSaved(context.wasSaved);
+    },
+    onSuccess: (_data: unknown, _vars: unknown, context: { wasSaved: boolean } | undefined) => {
+      toast.success(context?.wasSaved ? 'Removed from saved' : 'Saved to collection');
     },
   });
 
