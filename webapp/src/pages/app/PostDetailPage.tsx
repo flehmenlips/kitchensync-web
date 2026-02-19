@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -46,13 +46,16 @@ export function PostDetailPage() {
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  const [synced, setSynced] = useState(false);
 
-  // Sync local state once post loads
-  if (post && likeCount === 0 && !liked) {
-    setLikeCount(post.like_count);
-    setLiked(post.is_liked ?? false);
-    setSaved(post.is_saved ?? false);
-  }
+  useEffect(() => {
+    if (post && !synced) {
+      setLikeCount(post.like_count);
+      setLiked(post.is_liked ?? false);
+      setSaved(post.is_saved ?? false);
+      setSynced(true);
+    }
+  }, [post, synced]);
 
   const handleLike = () => {
     if (!post) return;
@@ -75,6 +78,7 @@ export function PostDetailPage() {
 
   const comments = commentsPages?.pages.flatMap(p => p.items) ?? [];
   const images = post?.media.filter(m => m.type === 'image') ?? [];
+  const video = post?.media.find(m => m.type === 'video');
 
   if (isLoading) {
     return (
@@ -132,9 +136,20 @@ export function PostDetailPage() {
             </div>
           </div>
 
-          {/* Images */}
+          {/* Media */}
           {images.length > 0 && (
             <img src={images[0].url} alt="" className="w-full aspect-[4/3] object-cover" />
+          )}
+          {!images.length && video && (
+            <div className="w-full aspect-[4/3] bg-black">
+              <video
+                src={video.url}
+                poster={video.thumbnail_url ?? undefined}
+                controls
+                preload="metadata"
+                className="w-full h-full object-cover"
+              />
+            </div>
           )}
 
           {/* Actions */}

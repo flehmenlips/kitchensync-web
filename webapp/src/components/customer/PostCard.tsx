@@ -122,13 +122,14 @@ export function PostCard({ post }: { post: Post }) {
           </div>
         )}
         {!images.length && video && (
-          <div className="relative w-full aspect-[4/3] bg-black flex items-center justify-center">
-            {video.thumbnail_url && (
-              <img src={video.thumbnail_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
-            )}
-            <div className="bg-white/20 rounded-full p-3 z-10">
-              <Play className="h-8 w-8 text-white" fill="white" />
-            </div>
+          <div className="relative w-full aspect-[4/3] bg-black">
+            <video
+              src={video.url}
+              poster={video.thumbnail_url ?? undefined}
+              controls
+              preload="metadata"
+              className="w-full h-full object-cover"
+            />
           </div>
         )}
         {!images.length && !video && post.recipe?.image_url && (
