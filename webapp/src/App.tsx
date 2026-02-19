@@ -22,6 +22,7 @@ import { AnalyticsPage } from "@/pages/AnalyticsPage";
 import { ActivityLogPage } from "@/pages/ActivityLogPage";
 import { FeaturedPage } from "@/pages/FeaturedPage";
 import { ModerationPage } from "@/pages/ModerationPage";
+import { PostModerationPage } from "@/pages/PostModerationPage";
 import { CreatorVerificationPage } from "@/pages/CreatorVerificationPage";
 import { ProductsPage } from "@/pages/ProductsPage";
 import { OrdersPage } from "@/pages/OrdersPage";
@@ -40,6 +41,7 @@ import { CustomersPage } from "@/pages/business/CustomersPage";
 import { TeamPage } from "@/pages/business/TeamPage";
 import { BusinessSettingsPage } from "@/pages/business/SettingsPage";
 import { BusinessAnalyticsPage } from "@/pages/business/AnalyticsPage";
+import { BusinessPostsPage } from "@/pages/business/PostsPage";
 import { BusinessLoginPage } from "@/pages/business/LoginPage";
 import { SignupPage as BusinessSignupPage } from "@/pages/business/SignupPage";
 import { EmailVerificationPage } from "@/pages/business/EmailVerificationPage";
@@ -82,6 +84,8 @@ const CustomerFeaturedRecipesPage = lazy(() => import("@/pages/app/FeaturedRecip
 const CustomerReservationPage = lazy(() => import("@/pages/app/ReservationPage").then(m => ({ default: m.ReservationPage })));
 const CustomerLoginPage = lazy(() => import("@/pages/app/LoginPage").then(m => ({ default: m.CustomerLoginPage })));
 const CustomerSignupPage = lazy(() => import("@/pages/app/SignupPage").then(m => ({ default: m.CustomerSignupPage })));
+const CustomerCreatePostPage = lazy(() => import("@/pages/app/CreatePostPage").then(m => ({ default: m.CreatePostPage })));
+const CustomerPostDetailPage = lazy(() => import("@/pages/app/PostDetailPage").then(m => ({ default: m.PostDetailPage })));
 
 // queryClient is imported from @/lib/queryClient
 
@@ -174,6 +178,7 @@ function AdminBusinessRoutes() {
           <Route path="admins" element={<AdminUsersPage />} />
           <Route path="activity" element={<ActivityLogPage />} />
           <Route path="moderation" element={<ModerationPage />} />
+          <Route path="post-moderation" element={<PostModerationPage />} />
           <Route path="creators" element={<CreatorVerificationPage />} />
           <Route path="products" element={<ProductsPage />} />
           <Route path="orders" element={<OrdersPage />} />
@@ -196,6 +201,7 @@ function AdminBusinessRoutes() {
           <Route path="menu" element={<MenuPage />} />
           <Route path="customers" element={<CustomersPage />} />
           <Route path="team" element={<TeamPage />} />
+          <Route path="posts" element={<BusinessPostsPage />} />
           <Route path="settings" element={<BusinessSettingsPage />} />
           <Route path="analytics" element={<BusinessAnalyticsPage />} />
         </Route>
@@ -256,6 +262,8 @@ function CustomerAppRoutes() {
           <Route path="user/:id" element={<Suspense fallback={<LoadingSpinner />}><CustomerUserProfilePage /></Suspense>} />
           <Route path="discover" element={<Suspense fallback={<LoadingSpinner />}><CustomerDiscoverUsersPage /></Suspense>} />
           <Route path="community/:id" element={<Suspense fallback={<LoadingSpinner />}><CustomerCommunityRecipePage /></Suspense>} />
+          <Route path="create-post" element={<Suspense fallback={<LoadingSpinner />}><CustomerCreatePostPage /></Suspense>} />
+          <Route path="post/:id" element={<Suspense fallback={<LoadingSpinner />}><CustomerPostDetailPage /></Suspense>} />
           <Route path="search" element={<Suspense fallback={<LoadingSpinner />}><CustomerDiscoverUsersPage /></Suspense>} />
           <Route path="tips" element={<Suspense fallback={<LoadingSpinner />}><CustomerTipsPage /></Suspense>} />
           <Route path="followers/:id" element={<Suspense fallback={<LoadingSpinner />}><CustomerFollowersPage /></Suspense>} />

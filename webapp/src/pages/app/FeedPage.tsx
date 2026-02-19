@@ -17,7 +17,11 @@ import {
   Users,
   ChefHat,
   Loader2,
+  Plus,
 } from 'lucide-react';
+import { usePostFeed } from '@/hooks/usePosts';
+import { PostCard } from '@/components/customer/PostCard';
+import type { Post } from '@/types/posts';
 
 function formatTime(val: unknown): string {
   if (val == null || val === '') return '';
@@ -151,15 +155,38 @@ export function FeedPage() {
 
   const feedItems = data?.pages.flatMap(p => p.items) || [];
 
+  // Posts feed
+  const { data: postData } = usePostFeed(tab === 'foryou' ? 'explore' : 'following', user?.id);
+  const postItems: Post[] = postData?.pages.flatMap(p => p.items) ?? [];
+  const nonRecipePosts = postItems.filter(p => p.post_type !== 'recipe_share');
+
+  // Merge recipe feed items and posts into a unified timeline
+  type UnifiedItem = { kind: 'recipe'; data: any } | { kind: 'post'; data: Post };
+  const unified: UnifiedItem[] = [
+    ...feedItems.map((r: any) => ({ kind: 'recipe' as const, data: r })),
+    ...nonRecipePosts.map(p => ({ kind: 'post' as const, data: p })),
+  ].sort((a, b) => {
+    const aTime = new Date(a.data.created_at).getTime();
+    const bTime = new Date(b.data.created_at).getTime();
+    return bTime - aTime;
+  });
+
   return (
     <div className="space-y-4">
-      {/* Tab selector */}
-      <Tabs value={tab} onValueChange={(v) => setTab(v as 'foryou' | 'following')}>
-        <TabsList className="w-full bg-secondary/30">
-          <TabsTrigger value="foryou" className="flex-1">For You</TabsTrigger>
-          <TabsTrigger value="following" className="flex-1">Following</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {/* Header with create button */}
+      <div className="flex items-center justify-between">
+        <Tabs value={tab} onValueChange={(v) => setTab(v as 'foryou' | 'following')} className="flex-1">
+          <TabsList className="w-full bg-secondary/30">
+            <TabsTrigger value="foryou" className="flex-1">For You</TabsTrigger>
+            <TabsTrigger value="following" className="flex-1">Following</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <Link to="/app/create-post" className="ml-3">
+          <Button size="sm" className="gap-1.5">
+            <Plus className="h-4 w-4" /> Post
+          </Button>
+        </Link>
+      </div>
 
       {/* Feed content */}
       {isLoading ? (
@@ -180,11 +207,15 @@ export function FeedPage() {
             </Card>
           ))}
         </div>
-      ) : feedItems.length > 0 ? (
+      ) : unified.length > 0 ? (
         <div className="space-y-4">
-          {feedItems.map((item: any) => (
-            <FeedCard key={item.id} item={item} />
-          ))}
+          {unified.map(item =>
+            item.kind === 'recipe' ? (
+              <FeedCard key={`recipe-${item.data.id}`} item={item.data} />
+            ) : (
+              <PostCard key={`post-${item.data.id}`} post={item.data} />
+            )
+          )}
           {/* Infinite scroll sentinel */}
           <div ref={loadMoreRef} className="py-4 text-center">
             {isFetchingNextPage && (
