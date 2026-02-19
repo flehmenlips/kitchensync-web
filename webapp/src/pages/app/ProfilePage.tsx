@@ -28,18 +28,22 @@ export function ProfilePage() {
     queryFn: async () => {
       if (!user) return { recipes: 0, lists: 0, menus: 0, followers: 0, following: 0 };
 
-      // Use denormalized counts from user_profiles (matching iOS pattern)
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileErr } = await supabase
         .from('user_profiles')
         .select('follower_count, following_count, shared_recipe_count')
         .eq('user_id', user.id)
         .maybeSingle();
+
+      // Throw on AbortError so react-query retries instead of caching empty data
+      if (profileErr?.message?.includes('aborted')) throw profileErr;
 
       const [recipesRes, listsRes, menusRes] = await Promise.all([
         supabase.from('recipes').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
         supabase.from('prep_lists').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
         supabase.from('menus').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
       ]);
+
+      if (recipesRes.error?.message?.includes('aborted')) throw recipesRes.error;
 
       return {
         recipes: recipesRes.count || 0,
@@ -163,12 +167,13 @@ function RecentRecipes({ userId }: { userId?: string }) {
     queryKey: ['my-recipes-preview', userId],
     queryFn: async () => {
       if (!userId) return [];
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('recipes')
         .select('id, title, image_url, created_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(6);
+      if (error?.message?.includes('aborted')) throw error;
       return data || [];
     },
     enabled: !!userId,

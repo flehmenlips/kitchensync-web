@@ -17,6 +17,10 @@ import {
   Loader2,
   MoreVertical,
   CheckCircle2,
+  Copy,
+  ArrowUp,
+  ArrowDown,
+  ShoppingCart,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -37,11 +41,15 @@ interface PrepTask {
   notes?: string;
 }
 
+const SHOPPING_SECTIONS = ['Produce', 'Meat & Seafood', 'Dairy & Eggs', 'Pantry', 'Frozen', 'Bakery', 'Beverages', 'Other'];
+
 export function ListDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useCustomerAuth();
   const queryClient = useQueryClient();
   const [newItem, setNewItem] = useState('');
+  const [newSection, setNewSection] = useState('');
 
   const { data: list, isLoading } = useQuery({
     queryKey: ['list', id],
@@ -73,13 +81,15 @@ export function ListDetailPage() {
     },
   });
 
+  const isShopping = list?.list_type === 'shopping';
+
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newItem.trim()) return;
     const newTask: PrepTask = {
       id: crypto.randomUUID(),
       task: newItem.trim(),
-      category: '',
+      category: isShopping ? (newSection || 'Other') : '',
       estimatedTime: '',
       priority: 'medium',
       completed: false,
@@ -102,6 +112,46 @@ export function ListDetailPage() {
   const deleteTask = (taskId: string) => {
     updateTasks.mutate(tasks.filter(t => t.id !== taskId));
   };
+
+  const moveTask = (taskId: string, direction: 'up' | 'down') => {
+    const idx = tasks.findIndex(t => t.id === taskId);
+    if (idx < 0) return;
+    const newIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (newIdx < 0 || newIdx >= tasks.length) return;
+    const newTasks = [...tasks];
+    [newTasks[idx], newTasks[newIdx]] = [newTasks[newIdx], newTasks[idx]];
+    newTasks.forEach((t, i) => t.sortOrder = i);
+    updateTasks.mutate(newTasks);
+  };
+
+  const duplicateList = useMutation({
+    mutationFn: async () => {
+      if (!user || !list) throw new Error('Missing data');
+      const resetTasks = tasks.map(t => ({
+        ...t,
+        id: crypto.randomUUID(),
+        completed: false,
+        status: 'pending',
+      }));
+      const { data, error } = await supabase.from('prep_lists').insert({
+        user_id: user.id,
+        title: `${list.title} (Copy)`,
+        list_type: list.list_type,
+        overview: list.overview,
+        tasks: resetTasks,
+        sections: list.sections || [],
+        tips: list.tips || [],
+      }).select('id').single();
+      if (error) throw error;
+      return data.id;
+    },
+    onSuccess: (newId) => {
+      queryClient.invalidateQueries({ queryKey: ['my-lists'] });
+      toast.success('List duplicated');
+      navigate(`/app/lists/${newId}`);
+    },
+    onError: () => toast.error('Failed to duplicate list'),
+  });
 
   const deleteList = useMutation({
     mutationFn: async () => {
@@ -158,6 +208,9 @@ export function ListDetailPage() {
             <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => duplicateList.mutate()}>
+              <Copy className="h-4 w-4 mr-2" /> Duplicate List
+            </DropdownMenuItem>
             <DropdownMenuItem
               className="text-destructive"
               onClick={() => { if (confirm('Delete this list?')) deleteList.mutate(); }}
@@ -185,10 +238,20 @@ export function ListDetailPage() {
 
       {/* Add item */}
       <form onSubmit={handleAddItem} className="flex gap-2">
+        {isShopping && (
+          <select
+            value={newSection}
+            onChange={(e) => setNewSection(e.target.value)}
+            className="rounded-md bg-secondary/30 border border-border/50 px-2 py-2 text-sm text-foreground min-w-[110px]"
+          >
+            <option value="">Section...</option>
+            {SHOPPING_SECTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        )}
         <Input
           value={newItem}
           onChange={(e) => setNewItem(e.target.value)}
-          placeholder="Add a task..."
+          placeholder={isShopping ? 'Add item...' : 'Add a task...'}
           className="bg-secondary/30 border-border/50"
         />
         <Button
@@ -203,10 +266,34 @@ export function ListDetailPage() {
 
       {/* Tasks */}
       <div className="space-y-1">
-        {/* Pending tasks */}
-        {pendingTasks.map((task) => (
-          <TaskRow key={task.id} task={task} onToggle={toggleTask} onDelete={deleteTask} />
-        ))}
+        {/* Shopping lists: group by section */}
+        {isShopping ? (
+          <>
+            {(() => {
+              const sections = new Map<string, PrepTask[]>();
+              pendingTasks.forEach(t => {
+                const sec = t.category || 'Other';
+                if (!sections.has(sec)) sections.set(sec, []);
+                sections.get(sec)!.push(t);
+              });
+              return Array.from(sections.entries()).map(([sec, sectionTasks]) => (
+                <div key={sec}>
+                  <div className="flex items-center gap-2 pt-2 pb-1">
+                    <ShoppingCart className="h-3 w-3 text-primary" />
+                    <span className="text-xs font-semibold text-primary uppercase tracking-wider">{sec}</span>
+                  </div>
+                  {sectionTasks.map(task => (
+                    <TaskRow key={task.id} task={task} onToggle={toggleTask} onDelete={deleteTask} onMove={moveTask} />
+                  ))}
+                </div>
+              ));
+            })()}
+          </>
+        ) : (
+          pendingTasks.map((task) => (
+            <TaskRow key={task.id} task={task} onToggle={toggleTask} onDelete={deleteTask} onMove={moveTask} />
+          ))
+        )}
 
         {/* Completed tasks */}
         {completedTasks.length > 0 && (
@@ -218,7 +305,7 @@ export function ListDetailPage() {
               </span>
             </div>
             {completedTasks.map((task) => (
-              <TaskRow key={task.id} task={task} onToggle={toggleTask} onDelete={deleteTask} />
+              <TaskRow key={task.id} task={task} onToggle={toggleTask} onDelete={deleteTask} onMove={moveTask} />
             ))}
           </>
         )}
@@ -237,10 +324,12 @@ function TaskRow({
   task,
   onToggle,
   onDelete,
+  onMove,
 }: {
   task: PrepTask;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
+  onMove: (id: string, dir: 'up' | 'down') => void;
 }) {
   const isCompleted = task.completed || task.status === 'completed';
 
@@ -277,14 +366,22 @@ function TaskRow({
       {task.estimatedTime && (
         <span className="text-[10px] text-muted-foreground">{task.estimatedTime}</span>
       )}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-        onClick={() => onDelete(task.id)}
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </Button>
+      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => onMove(task.id, 'up')}>
+          <ArrowUp className="h-3 w-3" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => onMove(task.id, 'down')}>
+          <ArrowDown className="h-3 w-3" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 text-muted-foreground hover:text-destructive"
+          onClick={() => onDelete(task.id)}
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      </div>
     </div>
   );
 }

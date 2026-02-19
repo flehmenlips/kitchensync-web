@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,93 +16,130 @@ import {
   BookOpen,
   Users,
   ChefHat,
+  Loader2,
 } from 'lucide-react';
+
+const PAGE_SIZE = 10;
+
+async function fetchFeedPage(tab: string, user: any, cursor?: string) {
+  let followingIds: string[] | null = null;
+  if (tab === 'following' && user) {
+    const { data: follows } = await supabase
+      .from('user_follows')
+      .select('following_id')
+      .eq('follower_id', user.id);
+    followingIds = follows?.map(f => f.following_id) || [];
+    if (followingIds.length === 0) return { items: [], nextCursor: null };
+  }
+
+  // "For You" sorts by popularity, "Following" by recency
+  let query = supabase
+    .from('user_shared_recipes')
+    .select(`
+      *,
+      recipe:recipes (
+        id, title, description, image_url, image_urls,
+        prep_time, cook_time, servings, difficulty
+      )
+    `)
+    .eq('is_public', true)
+    .limit(PAGE_SIZE);
+
+  if (tab === 'foryou') {
+    query = query.order('like_count', { ascending: false }).order('created_at', { ascending: false });
+  } else {
+    query = query.order('created_at', { ascending: false });
+  }
+
+  if (followingIds) {
+    query = query.in('user_id', followingIds);
+  }
+  if (cursor) {
+    query = query.lt('created_at', cursor);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    if (error.message?.includes('aborted') || (error as any).name === 'AbortError') throw error;
+    return { items: [], nextCursor: null };
+  }
+  if (!data?.length) return { items: [], nextCursor: null };
+
+  // Batch fetch profiles
+  const userIds = [...new Set(data.map(r => r.user_id))];
+  const { data: profiles } = await supabase
+    .from('user_profiles')
+    .select('user_id, display_name, kitchen_name, handle, avatar_url')
+    .in('user_id', userIds);
+  const profileMap = new Map((profiles || []).map(p => [p.user_id, p]));
+
+  // Batch fetch like/save status
+  const recipeIds = data.map(r => r.id);
+  const [likeData, saveData] = await Promise.all([
+    user ? supabase.from('recipe_likes').select('shared_recipe_id').eq('user_id', user.id).in('shared_recipe_id', recipeIds) : { data: [] },
+    user ? supabase.from('recipe_saves').select('shared_recipe_id').eq('user_id', user.id).in('shared_recipe_id', recipeIds) : { data: [] },
+  ]);
+  const likedIds = new Set((likeData.data || []).map((l: any) => l.shared_recipe_id));
+  const savedIds = new Set((saveData.data || []).map((s: any) => s.shared_recipe_id));
+
+  const items = data.map(item => {
+    const recipe = item.recipe;
+    return {
+      ...item,
+      title: recipe?.title || item.caption || 'Shared Recipe',
+      description: recipe?.description || item.caption,
+      image_url: recipe?.image_url,
+      image_urls: recipe?.image_urls,
+      prep_time: recipe?.prep_time,
+      cook_time: recipe?.cook_time,
+      servings: recipe?.servings,
+      difficulty: recipe?.difficulty,
+      user_profiles: profileMap.get(item.user_id) || null,
+      isLiked: likedIds.has(item.id),
+      isSaved: savedIds.has(item.id),
+    };
+  });
+
+  const nextCursor = data.length === PAGE_SIZE ? data[data.length - 1].created_at : null;
+  return { items, nextCursor };
+}
 
 export function FeedPage() {
   const { user } = useCustomerAuth();
   const [tab, setTab] = useState<'foryou' | 'following'>('foryou');
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  const { data: feedItems, isLoading } = useQuery({
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ['feed', tab, user?.id],
-    queryFn: async () => {
-      // For "following" tab, get posts from followed users only
-      let followingIds: string[] | null = null;
-      if (tab === 'following' && user) {
-        const { data: follows } = await supabase
-          .from('user_follows')
-          .select('following_id')
-          .eq('follower_id', user.id);
-
-        followingIds = follows?.map(f => f.following_id) || [];
-        if (followingIds.length === 0) return [];
-      }
-
-      // Fetch shared recipes with linked recipe details (matching iOS pattern)
-      let query = supabase
-        .from('user_shared_recipes')
-        .select(`
-          *,
-          recipe:recipes (
-            id, title, description, image_url, image_urls,
-            prep_time, cook_time, servings, difficulty
-          )
-        `)
-        .eq('is_public', true)
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (followingIds) {
-        query = query.in('user_id', followingIds);
-      }
-
-      const { data, error } = await query;
-      if (error) {
-        console.error('[Feed] Error:', error.message);
-        return [];
-      }
-      if (!data?.length) return [];
-
-      // Batch fetch user profiles (matching iOS pattern)
-      const userIds = [...new Set(data.map(r => r.user_id))];
-      const { data: profiles } = await supabase
-        .from('user_profiles')
-        .select('user_id, display_name, kitchen_name, handle, avatar_url')
-        .in('user_id', userIds);
-
-      const profileMap = new Map(
-        (profiles || []).map(p => [p.user_id, p])
-      );
-
-      // Batch fetch like/save status for current user (matching iOS pattern)
-      const recipeIds = data.map(r => r.id);
-      const [likeData, saveData] = await Promise.all([
-        user ? supabase.from('recipe_likes').select('shared_recipe_id').eq('user_id', user.id).in('shared_recipe_id', recipeIds) : { data: [] },
-        user ? supabase.from('recipe_saves').select('shared_recipe_id').eq('user_id', user.id).in('shared_recipe_id', recipeIds) : { data: [] },
-      ]);
-      const likedIds = new Set((likeData.data || []).map((l: any) => l.shared_recipe_id));
-      const savedIds = new Set((saveData.data || []).map((s: any) => s.shared_recipe_id));
-
-      // Flatten recipe details onto the feed item for easy rendering
-      return data.map(item => {
-        const recipe = item.recipe;
-        return {
-          ...item,
-          title: recipe?.title || item.caption || 'Shared Recipe',
-          description: recipe?.description || item.caption,
-          image_url: recipe?.image_url,
-          image_urls: recipe?.image_urls,
-          prep_time: recipe?.prep_time,
-          cook_time: recipe?.cook_time,
-          servings: recipe?.servings,
-          difficulty: recipe?.difficulty,
-          user_profiles: profileMap.get(item.user_id) || null,
-          isLiked: likedIds.has(item.id),
-          isSaved: savedIds.has(item.id),
-        };
-      });
-    },
+    queryFn: ({ pageParam }) => fetchFeedPage(tab, user, pageParam as string | undefined),
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    initialPageParam: undefined as string | undefined,
     enabled: !!user,
   });
+
+  // Infinite scroll observer
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const feedItems = data?.pages.flatMap(p => p.items) || [];
 
   return (
     <div className="space-y-4">
@@ -133,11 +170,17 @@ export function FeedPage() {
             </Card>
           ))}
         </div>
-      ) : feedItems && feedItems.length > 0 ? (
+      ) : feedItems.length > 0 ? (
         <div className="space-y-4">
           {feedItems.map((item: any) => (
             <FeedCard key={item.id} item={item} />
           ))}
+          {/* Infinite scroll sentinel */}
+          <div ref={loadMoreRef} className="py-4 text-center">
+            {isFetchingNextPage && (
+              <Loader2 className="h-5 w-5 animate-spin text-primary mx-auto" />
+            )}
+          </div>
         </div>
       ) : (
         <EmptyFeed tab={tab} />

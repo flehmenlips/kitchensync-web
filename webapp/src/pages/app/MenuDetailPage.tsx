@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -16,6 +16,11 @@ import {
   Calendar,
   Users as UsersIcon,
   MoreVertical,
+  ArrowUp,
+  ArrowDown,
+  Link2,
+  BookOpen,
+  X,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -27,10 +32,13 @@ import {
 export function MenuDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useCustomerAuth();
   const queryClient = useQueryClient();
   const [newCourse, setNewCourse] = useState('');
   const [newItemName, setNewItemName] = useState('');
   const [selectedCourse, setSelectedCourse] = useState('');
+  const [linkingItemId, setLinkingItemId] = useState<string | null>(null);
+  const [recipeSearch, setRecipeSearch] = useState('');
 
   const { data: menu, isLoading: menuLoading } = useQuery({
     queryKey: ['menu', id],
@@ -49,13 +57,25 @@ export function MenuDetailPage() {
       if (!id) return [];
       const { data, error } = await supabase
         .from('menu_items')
-        .select('*')
+        .select('*, recipe:recipes(id, title, image_url)')
         .eq('menu_id', id)
         .order('sort_order');
       if (error) return [];
       return data || [];
     },
     enabled: !!id,
+  });
+
+  const { data: userRecipes } = useQuery({
+    queryKey: ['user-recipes-for-link', user?.id, recipeSearch],
+    queryFn: async () => {
+      if (!user) return [];
+      let q = supabase.from('recipes').select('id, title, image_url').eq('user_id', user.id).order('title').limit(20);
+      if (recipeSearch) q = q.ilike('title', `%${recipeSearch}%`);
+      const { data } = await q;
+      return data || [];
+    },
+    enabled: !!user && !!linkingItemId,
   });
 
   const addItem = useMutation({
@@ -84,6 +104,36 @@ export function MenuDetailPage() {
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['menu-items', id] }),
+  });
+
+  const reorderItem = useMutation({
+    mutationFn: async ({ itemId, direction }: { itemId: string; direction: 'up' | 'down' }) => {
+      if (!items) return;
+      const idx = items.findIndex((i: any) => i.id === itemId);
+      if (idx < 0) return;
+      const newIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (newIdx < 0 || newIdx >= items.length) return;
+      const updates = [
+        { id: items[idx].id, sort_order: newIdx },
+        { id: items[newIdx].id, sort_order: idx },
+      ];
+      for (const u of updates) {
+        await supabase.from('menu_items').update({ sort_order: u.sort_order }).eq('id', u.id);
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['menu-items', id] }),
+  });
+
+  const linkRecipe = useMutation({
+    mutationFn: async ({ itemId, recipeId }: { itemId: string; recipeId: string | null }) => {
+      const { error } = await supabase.from('menu_items').update({ recipe_id: recipeId }).eq('id', itemId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['menu-items', id] });
+      setLinkingItemId(null);
+      setRecipeSearch('');
+    },
   });
 
   const deleteMenu = useMutation({
@@ -181,22 +231,82 @@ export function MenuDetailPage() {
               </h3>
               <div className="space-y-1">
                 {courses[courseName].map((item: any) => (
-                  <div key={item.id} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-secondary/20 group">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-foreground">{item.item_name}</p>
-                      {item.item_description && (
-                        <p className="text-xs text-muted-foreground">{item.item_description}</p>
-                      )}
+                  <div key={item.id} className="space-y-1">
+                    <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-secondary/20 group">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-foreground">{item.item_name}</p>
+                        {item.item_description && (
+                          <p className="text-xs text-muted-foreground">{item.item_description}</p>
+                        )}
+                        {item.recipe && (
+                          <Link to={`/app/recipes/${item.recipe.id}`} className="flex items-center gap-1.5 mt-1 text-xs text-primary hover:underline">
+                            <BookOpen className="h-3 w-3" />
+                            {item.recipe.title}
+                          </Link>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => reorderItem.mutate({ itemId: item.id, direction: 'up' })}>
+                          <ArrowUp className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => reorderItem.mutate({ itemId: item.id, direction: 'down' })}>
+                          <ArrowDown className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => { setLinkingItemId(item.id); setRecipeSearch(''); }}>
+                          <Link2 className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => deleteItem.mutate(item.id)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                      onClick={() => deleteItem.mutate(item.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    {/* Recipe linking popover */}
+                    {linkingItemId === item.id && (
+                      <Card className="mx-3 bg-card/80 border-border/40">
+                        <CardContent className="p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-medium text-foreground">Link a Recipe</p>
+                            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setLinkingItemId(null)}>
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <Input
+                            value={recipeSearch}
+                            onChange={(e) => setRecipeSearch(e.target.value)}
+                            placeholder="Search recipes..."
+                            className="h-8 text-xs bg-secondary/30 border-border/50"
+                          />
+                          <div className="max-h-32 overflow-y-auto space-y-1">
+                            {item.recipe_id && (
+                              <button
+                                onClick={() => linkRecipe.mutate({ itemId: item.id, recipeId: null })}
+                                className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-destructive/10 text-destructive"
+                              >
+                                Remove link
+                              </button>
+                            )}
+                            {userRecipes?.map((r: any) => (
+                              <button
+                                key={r.id}
+                                onClick={() => linkRecipe.mutate({ itemId: item.id, recipeId: r.id })}
+                                className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-secondary/30 flex items-center gap-2"
+                              >
+                                {r.image_url ? (
+                                  <img src={r.image_url} className="h-5 w-5 rounded object-cover" />
+                                ) : (
+                                  <BookOpen className="h-4 w-4 text-muted-foreground" />
+                                )}
+                                <span className="truncate">{r.title}</span>
+                              </button>
+                            ))}
+                            {userRecipes?.length === 0 && (
+                              <p className="text-xs text-muted-foreground p-2">No recipes found</p>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
                   </div>
                 ))}
               </div>

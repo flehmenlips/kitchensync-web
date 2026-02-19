@@ -78,6 +78,8 @@ const CustomerFollowRequestsPage = lazy(() => import("@/pages/app/FollowRequests
 const CustomerInboxPage = lazy(() => import("@/pages/app/InboxPage").then(m => ({ default: m.InboxPage })));
 const CustomerAIMenuPage = lazy(() => import("@/pages/app/AIMenuPage").then(m => ({ default: m.AIMenuPage })));
 const CustomerAssetLibraryPage = lazy(() => import("@/pages/app/AssetLibraryPage").then(m => ({ default: m.AssetLibraryPage })));
+const CustomerFeaturedRecipesPage = lazy(() => import("@/pages/app/FeaturedRecipesPage").then(m => ({ default: m.FeaturedRecipesPage })));
+const CustomerReservationPage = lazy(() => import("@/pages/app/ReservationPage").then(m => ({ default: m.ReservationPage })));
 const CustomerLoginPage = lazy(() => import("@/pages/app/LoginPage").then(m => ({ default: m.CustomerLoginPage })));
 const CustomerSignupPage = lazy(() => import("@/pages/app/SignupPage").then(m => ({ default: m.CustomerSignupPage })));
 
@@ -246,7 +248,7 @@ function CustomerAppRoutes() {
           <Route path="me/notifications" element={<Suspense fallback={<LoadingSpinner />}><CustomerNotificationsPage /></Suspense>} />
           <Route path="business/:id" element={<Suspense fallback={<LoadingSpinner />}><CustomerBusinessProfilePage /></Suspense>} />
           <Route path="business/:id/menu" element={<Suspense fallback={<LoadingSpinner />}><CustomerBusinessMenuPage /></Suspense>} />
-          <Route path="business/:id/reserve" element={<Suspense fallback={<LoadingSpinner />}><CustomerBusinessProfilePage /></Suspense>} />
+          <Route path="business/:id/reserve" element={<Suspense fallback={<LoadingSpinner />}><CustomerReservationPage /></Suspense>} />
           <Route path="cart" element={<Suspense fallback={<LoadingSpinner />}><CustomerCartPage /></Suspense>} />
           <Route path="checkout" element={<Suspense fallback={<LoadingSpinner />}><CustomerCheckoutPage /></Suspense>} />
           <Route path="order-confirmed" element={<Suspense fallback={<LoadingSpinner />}><CustomerOrderConfirmedPage /></Suspense>} />
@@ -261,6 +263,7 @@ function CustomerAppRoutes() {
           <Route path="inbox" element={<Suspense fallback={<LoadingSpinner />}><CustomerInboxPage /></Suspense>} />
           <Route path="menus/ai" element={<Suspense fallback={<LoadingSpinner />}><CustomerAIMenuPage /></Suspense>} />
           <Route path="assets" element={<Suspense fallback={<LoadingSpinner />}><CustomerAssetLibraryPage /></Suspense>} />
+          <Route path="featured" element={<Suspense fallback={<LoadingSpinner />}><CustomerFeaturedRecipesPage /></Suspense>} />
         </Route>
       </Routes>
     </CustomerAuthProvider>

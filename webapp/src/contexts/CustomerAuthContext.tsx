@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 import type { CustomerUserProfile } from '@/types/database';
@@ -19,49 +19,59 @@ interface CustomerAuthContextType {
 
 const CustomerAuthContext = createContext<CustomerAuthContextType | undefined>(undefined);
 
+// Fetch profile via raw REST to bypass the Supabase client's internal
+// _useSession/AbortController that can be transiently broken during
+// auth state transitions.
+async function fetchProfileRaw(userId: string, accessToken: string): Promise<CustomerUserProfile | null> {
+  const url = import.meta.env.VITE_SUPABASE_URL;
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  try {
+    const res = await fetch(
+      `${url}/rest/v1/user_profiles?user_id=eq.${userId}&select=*&limit=1`,
+      {
+        headers: {
+          'apikey': key,
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+        },
+      }
+    );
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return rows?.[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function CustomerAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<CustomerUserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  const fetchProfile = async (userId: string): Promise<CustomerUserProfile | null> => {
-    try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Error fetching profile:', error.message);
-        return null;
-      }
-      return data as CustomerUserProfile | null;
-    } catch (err) {
-      console.error('Profile fetch error:', err);
-      return null;
-    }
-  };
+  const mountedRef = useRef(true);
 
   const refreshProfile = async () => {
-    if (user) {
-      const p = await fetchProfile(user.id);
-      setProfile(p);
+    if (user && session?.access_token) {
+      const p = await fetchProfileRaw(user.id, session.access_token);
+      if (mountedRef.current) setProfile(p);
     }
   };
 
+  // Auth listener: use ONLY onAuthStateChange — never call getSession() directly.
+  // Multiple concurrent getSession() calls (or creating multiple clients)
+  // corrupt the GoTrueClient's internal AbortController.
   useEffect(() => {
+    mountedRef.current = true;
+
     if (!isSupabaseConfigured) {
       setIsLoading(false);
       return;
     }
 
-    // Use ONLY onAuthStateChange — never call getSession() directly.
-    // Supabase fires INITIAL_SESSION immediately with the cached session,
-    // which avoids the AbortError from concurrent getSession() calls
-    // (especially during React StrictMode double-mount in dev).
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (!mountedRef.current) return;
       console.log('[CustomerAuth] Auth event:', event, newSession?.user?.email);
 
       if (event === 'SIGNED_OUT') {
@@ -77,37 +87,46 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
         if (newSession?.user) {
           setSession(newSession);
           setUser(newSession.user);
-
-          // Fetch profile in the background — don't block the loading state
-          fetchProfile(newSession.user.id).then((p) => {
-            setProfile(p);
-          });
-
-          // Invalidate queries on sign-in or token refresh so data re-fetches
-          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-            console.log('[CustomerAuth] Invalidating queries after', event);
-            queryClient.invalidateQueries();
-          }
         }
-
         setIsLoading(false);
-        return;
       }
-
-      // For any other event, just stop loading
-      setIsLoading(false);
     });
 
-    // Safety timeout in case INITIAL_SESSION never fires
     const safetyTimeout = setTimeout(() => {
-      setIsLoading(false);
+      if (mountedRef.current) setIsLoading(false);
     }, 5000);
 
     return () => {
+      mountedRef.current = false;
       clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
   }, []);
+
+  // Separate effect: fetch profile and invalidate queries when user changes.
+  // Runs outside the onAuthStateChange callback scope.
+  useEffect(() => {
+    if (!user || !session?.access_token) {
+      setProfile(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const load = async () => {
+      // Brief delay to let the auth layer finish internal housekeeping
+      await new Promise(r => setTimeout(r, 250));
+      if (cancelled) return;
+
+      const p = await fetchProfileRaw(user.id, session.access_token);
+      if (cancelled) return;
+      setProfile(p);
+      queryClient.invalidateQueries();
+    };
+
+    load();
+    return () => { cancelled = true; };
+  }, [user?.id, session?.access_token]);
 
   const signIn = async (email: string, password: string) => {
     if (!isSupabaseConfigured) {
@@ -136,7 +155,6 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
       });
       if (error) return { error: new Error(error.message) };
 
-      // Create user profile if signup successful
       if (data.user) {
         await supabase.from('user_profiles').upsert({
           user_id: data.user.id,
@@ -154,13 +172,12 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setProfile(null);
-    // Clear all React Query cache to prevent stale data on next login
     queryClient.clear();
     if (!isSupabaseConfigured) return;
     try {
       await supabase.auth.signOut();
-    } catch (error) {
-      console.error('Sign out error:', error);
+    } catch {
+      // Suppress — sign-out errors (including AbortError) are harmless
     }
   };
 

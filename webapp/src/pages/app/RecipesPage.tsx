@@ -37,6 +37,10 @@ export function RecipesPage() {
         .order('created_at', { ascending: false });
 
       if (error) {
+        // AbortErrors are transient — let react-query retry handle them
+        if (error.message?.includes('aborted') || (error as any).name === 'AbortError') {
+          throw error;
+        }
         console.error('[Recipes] Error:', error.message);
         return [];
       }

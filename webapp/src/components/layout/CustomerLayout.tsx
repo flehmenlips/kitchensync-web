@@ -24,6 +24,7 @@ import {
   Plus,
   Inbox,
   Image as ImageIcon,
+  Sparkles,
 } from 'lucide-react';
 
 interface TabItem {
@@ -131,6 +132,10 @@ export function CustomerLayout() {
                 <DropdownMenuItem onClick={() => navigate('/app/me/settings')}>
                   <Settings className="h-4 w-4 mr-2" />
                   Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/app/featured')}>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Featured Recipes
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate('/app/inbox')}>
                   <Inbox className="h-4 w-4 mr-2" />
