@@ -1066,7 +1066,7 @@ export function MyRecipesPage() {
                           />
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Use the Images tab in Vibecode to upload images and get URLs
+                          Paste an image URL or upload to your Asset Library
                         </p>
                       </div>
 
@@ -1401,7 +1401,7 @@ export function MyRecipesPage() {
                   placeholder="https://example.com/image.jpg"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Use the Images tab in Vibecode to upload images and get URLs
+                  Paste an image URL or upload to your Asset Library
                 </p>
               </div>
 

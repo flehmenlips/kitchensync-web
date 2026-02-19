@@ -19,12 +19,12 @@ const Index = () => {
             color: "transparent",
           }}
         >
-          Welcome to vibecode.dev
-        </h1>
+          Welcome to KitchenSync
+    </h1>
 
         {/* Placeholder message */}
         <p className="mt-8 text-base sm:text-lg text-muted-foreground leading-relaxed">
-          Share your idea with Claude Code and see it come to life.
+          Recipes, community, and commerce — all in sync.
         </p>
       </div>
 
