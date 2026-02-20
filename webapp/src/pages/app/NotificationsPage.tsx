@@ -46,8 +46,6 @@ interface ActorProfile {
 function getNotificationMessage(notif: any, actor: ActorProfile | undefined): string {
   const name = actor?.display_name || actor?.kitchen_name || 'Someone';
 
-  if (notif.message) return notif.message;
-
   switch (notif.type) {
     case 'follow':
       return `${name} started following you`;
