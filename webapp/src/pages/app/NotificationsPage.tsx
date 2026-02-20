@@ -18,17 +18,65 @@ import {
   Check,
   ChevronRight,
   Users,
+  ImageIcon,
 } from 'lucide-react';
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   follow: UserPlus,
   like: Heart,
   comment: MessageCircle,
+  reply: MessageCircle,
   repost: Repeat2,
   new_recipe: BookOpen,
   follow_request: UserPlus,
   mention: MessageCircle,
+  post_like: Heart,
+  post_comment: MessageCircle,
+  post_reply: MessageCircle,
+  new_post: ImageIcon,
 };
+
+interface ActorProfile {
+  user_id: string;
+  display_name: string | null;
+  kitchen_name: string | null;
+  avatar_url: string | null;
+}
+
+function getNotificationMessage(notif: any, actor: ActorProfile | undefined): string {
+  const name = actor?.display_name || actor?.kitchen_name || 'Someone';
+
+  if (notif.message) return notif.message;
+
+  switch (notif.type) {
+    case 'follow':
+      return `${name} started following you`;
+    case 'follow_request':
+      return `${name} requested to follow you`;
+    case 'like':
+      return `${name} liked your recipe`;
+    case 'comment':
+      return `${name} commented on your recipe`;
+    case 'reply':
+      return `${name} replied to your comment`;
+    case 'mention':
+      return `${name} mentioned you`;
+    case 'repost':
+      return `${name} reposted your content`;
+    case 'new_recipe':
+      return `${name} shared a new recipe`;
+    case 'post_like':
+      return `${name} liked your post`;
+    case 'post_comment':
+      return `${name} commented on your post`;
+    case 'post_reply':
+      return `${name} replied to your comment`;
+    case 'new_post':
+      return `${name} shared a new post`;
+    default:
+      return `${name} interacted with your content`;
+  }
+}
 
 export function NotificationsPage() {
   const navigate = useNavigate();
@@ -50,7 +98,28 @@ export function NotificationsPage() {
         console.error('Notifications error:', error);
         return [];
       }
-      return data || [];
+
+      const notifs = data || [];
+
+      const actorIds = [...new Set(notifs.map(n => n.actor_id).filter(Boolean))];
+      let actorMap = new Map<string, ActorProfile>();
+
+      if (actorIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('user_profiles')
+          .select('user_id, display_name, kitchen_name, avatar_url')
+          .in('user_id', actorIds);
+
+        if (profiles) {
+          profiles.forEach(p => actorMap.set(p.user_id, p));
+        }
+      }
+
+      return notifs.map(n => ({
+        ...n,
+        actor: n.actor_id ? actorMap.get(n.actor_id) : undefined,
+        formattedMessage: getNotificationMessage(n, n.actor_id ? actorMap.get(n.actor_id) : undefined),
+      }));
     },
     enabled: !!user,
   });
@@ -142,6 +211,10 @@ export function NotificationsPage() {
         <div className="space-y-1">
           {notifications.map((notif: any) => {
             const Icon = iconMap[notif.type] || Bell;
+            const actorInitials = notif.actor?.display_name
+              ? notif.actor.display_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+              : '?';
+
             return (
               <div
                 key={notif.id}
@@ -152,22 +225,35 @@ export function NotificationsPage() {
                     : 'bg-primary/5 hover:bg-primary/10'
                 )}
                 onClick={() => {
-                  if (notif.target_id && notif.target_type === 'recipe') {
+                  if (notif.target_id && (notif.target_type === 'recipe')) {
                     navigate(`/app/community/${notif.target_id}`);
+                  } else if (notif.target_id && notif.type?.startsWith('post')) {
+                    navigate(`/app/post/${notif.target_id}`);
                   } else if (notif.actor_id) {
                     navigate(`/app/user/${notif.actor_id}`);
                   }
                 }}
               >
-                <div className={cn(
-                  'w-10 h-10 rounded-full flex items-center justify-center shrink-0',
-                  notif.is_read ? 'bg-secondary/30' : 'bg-primary/10'
-                )}>
-                  <Icon className={cn('h-4 w-4', notif.is_read ? 'text-muted-foreground' : 'text-primary')} />
+                <div className="relative shrink-0">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={notif.actor?.avatar_url} />
+                    <AvatarFallback className={cn(
+                      'text-xs',
+                      notif.is_read ? 'bg-secondary/30' : 'bg-primary/10 text-primary'
+                    )}>
+                      {actorInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className={cn(
+                    'absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center border-2 border-background',
+                    notif.is_read ? 'bg-secondary' : 'bg-primary'
+                  )}>
+                    <Icon className={cn('h-2.5 w-2.5', notif.is_read ? 'text-muted-foreground' : 'text-primary-foreground')} />
+                  </div>
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className={cn('text-sm', notif.is_read ? 'text-muted-foreground' : 'text-foreground')}>
-                    {notif.message}
+                    {notif.formattedMessage}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {formatTime(notif.created_at)}

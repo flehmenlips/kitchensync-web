@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,6 +22,7 @@ import {
   Utensils,
   Building2,
   BadgeCheck,
+  Users,
 } from 'lucide-react';
 
 const businessTypes = [
@@ -43,13 +44,35 @@ export function ExplorePage() {
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState('all');
 
-  const { data: businesses, isLoading } = useQuery({
+  const { data: businesses, isLoading, isError } = useQuery({
     queryKey: ['explore-businesses', selectedType],
     queryFn: async () => {
-      const params = new URLSearchParams({ active: 'true' });
-      if (selectedType !== 'all') params.set('type', selectedType);
-      return api.get<any[]>(`/api/business?${params}`);
+      let query = supabase
+        .from('business_accounts')
+        .select('id, owner_user_id, business_name, business_type, slug, logo_url, cover_image_url, description, city, state, is_verified, is_active, created_at')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (selectedType !== 'all') {
+        query = query.eq('business_type', selectedType);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []).map(b => ({
+        id: b.id,
+        businessName: b.business_name,
+        businessType: b.business_type,
+        slug: b.slug,
+        logoUrl: b.logo_url,
+        coverImageUrl: b.cover_image_url,
+        description: b.description,
+        city: b.city,
+        state: b.state,
+        isVerified: b.is_verified,
+      }));
     },
+    retry: 1,
   });
 
   const filtered = businesses?.filter(b =>
@@ -97,6 +120,21 @@ export function ExplorePage() {
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
 
+      {/* Discover People */}
+      <Link to="/app/discover" className="block">
+        <Card className="bg-primary/5 border-primary/20 hover:bg-primary/10 transition-colors">
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <Users className="h-4 w-4 text-primary" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-foreground">Discover People</p>
+              <p className="text-xs text-muted-foreground">Find and follow other foodies in the community</p>
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
+
       {/* Results */}
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -109,6 +147,12 @@ export function ExplorePage() {
               </CardContent>
             </Card>
           ))}
+        </div>
+      ) : isError ? (
+        <div className="py-16 text-center">
+          <Building2 className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
+          <h3 className="text-lg font-semibold text-foreground">Unable to load businesses</h3>
+          <p className="text-sm text-muted-foreground mt-1">Please try again later</p>
         </div>
       ) : filtered.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -104,14 +104,27 @@ export function CustomerLayout() {
             >
               <Bell className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 text-primary hover:bg-primary/10"
-              onClick={() => navigate('/app/recipes/new')}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 text-primary hover:bg-primary/10"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem onClick={() => navigate('/app/create-post')}>
+                  <ImageIcon className="h-4 w-4 mr-2" />
+                  New Post
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/app/recipes/new')}>
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  New Recipe
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -132,6 +145,10 @@ export function CustomerLayout() {
                 <DropdownMenuItem onClick={() => navigate('/app/me/settings')}>
                   <Settings className="h-4 w-4 mr-2" />
                   Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/app/discover')}>
+                  <Search className="h-4 w-4 mr-2" />
+                  Discover People
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate('/app/featured')}>
                   <Sparkles className="h-4 w-4 mr-2" />
