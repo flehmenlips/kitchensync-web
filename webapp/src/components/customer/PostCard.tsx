@@ -127,6 +127,10 @@ export function PostCard({ post }: { post: Post }) {
               src={video.url}
               poster={video.thumbnail_url ?? undefined}
               controls
+              autoPlay
+              muted
+              loop
+              playsInline
               preload="metadata"
               className="w-full h-full object-cover"
             />
