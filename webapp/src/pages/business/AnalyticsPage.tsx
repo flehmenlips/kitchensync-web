@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useBusiness } from '@/contexts/BusinessContext';
-import { format, subDays } from 'date-fns';
+import { format } from 'date-fns';
 import {
   LineChart,
   Line,
@@ -139,107 +139,14 @@ export function BusinessAnalyticsPage() {
         throw new Error('No business selected');
       }
 
-      // Try to fetch from API
-      try {
-        const result = await api.get<AnalyticsDashboard>(
-          `/api/analytics/${businessId}/dashboard?range=${dateRange}`
-        );
-        return result;
-      } catch {
-        // If API not available, return mock data
-        return generateMockAnalytics();
-      }
+      return api.get<AnalyticsDashboard>(
+        `/api/analytics/${businessId}/dashboard?range=${dateRange}`
+      );
     },
     enabled: !!businessId,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
+    retry: 1,
   });
-
-  // Generate mock data for demo
-  function generateMockAnalytics(): AnalyticsDashboard {
-    const now = new Date();
-
-    // Revenue trend for last 7 days
-    const revenueTrend = Array.from({ length: 7 }, (_, i) => {
-      const date = subDays(now, 6 - i);
-      return {
-        date: format(date, 'MMM dd'),
-        revenue: Math.floor(Math.random() * 2000) + 1500,
-        orders: Math.floor(Math.random() * 40) + 20,
-      };
-    });
-
-    // Orders by status
-    const ordersByStatus = [
-      { status: 'pending', count: 3 },
-      { status: 'confirmed', count: 5 },
-      { status: 'preparing', count: 8 },
-      { status: 'ready', count: 2 },
-      { status: 'completed', count: 42 },
-      { status: 'cancelled', count: 4 },
-    ];
-
-    // Orders by hour (typical restaurant pattern)
-    const ordersByHour = [
-      { hour: 10, count: 5 },
-      { hour: 11, count: 12 },
-      { hour: 12, count: 28 },
-      { hour: 13, count: 25 },
-      { hour: 14, count: 15 },
-      { hour: 15, count: 8 },
-      { hour: 16, count: 6 },
-      { hour: 17, count: 10 },
-      { hour: 18, count: 22 },
-      { hour: 19, count: 35 },
-      { hour: 20, count: 32 },
-      { hour: 21, count: 18 },
-      { hour: 22, count: 8 },
-    ];
-
-    // Popular menu items
-    const popularItems = [
-      { id: '1', name: 'Coq au Vin', category: 'Main Course', orderCount: 45, revenue: 1395 },
-      { id: '2', name: 'Beef Bourguignon', category: 'Main Course', orderCount: 38, revenue: 1292 },
-      { id: '3', name: 'French Onion Soup', category: 'Appetizer', orderCount: 35, revenue: 385 },
-      { id: '4', name: 'Creme Brulee', category: 'Dessert', orderCount: 32, revenue: 384 },
-      { id: '5', name: 'Duck Confit', category: 'Main Course', orderCount: 28, revenue: 1036 },
-    ];
-
-    // Top customers
-    const topCustomers = [
-      { id: '1', name: 'James Wilson', email: 'james@example.com', totalSpent: 1245.50, visitCount: 12, lastVisit: format(subDays(now, 2), 'yyyy-MM-dd') },
-      { id: '2', name: 'Sarah Chen', email: 'sarah@example.com', totalSpent: 987.25, visitCount: 8, lastVisit: format(subDays(now, 5), 'yyyy-MM-dd') },
-      { id: '3', name: 'Michael Brown', email: 'michael@example.com', totalSpent: 876.00, visitCount: 6, lastVisit: format(subDays(now, 1), 'yyyy-MM-dd') },
-      { id: '4', name: 'Emily Davis', email: 'emily@example.com', totalSpent: 745.50, visitCount: 5, lastVisit: format(subDays(now, 7), 'yyyy-MM-dd') },
-      { id: '5', name: 'David Lee', email: 'david@example.com', totalSpent: 698.75, visitCount: 4, lastVisit: format(subDays(now, 3), 'yyyy-MM-dd') },
-    ];
-
-    const todayRevenue = revenueTrend[revenueTrend.length - 1].revenue;
-    const yesterdayRevenue = revenueTrend[revenueTrend.length - 2].revenue;
-    const todayOrders = revenueTrend[revenueTrend.length - 1].orders;
-    const yesterdayOrders = revenueTrend[revenueTrend.length - 2].orders;
-
-    return {
-      todayRevenue,
-      todayOrders,
-      newCustomers: 8,
-      averageOrderValue: todayRevenue / todayOrders,
-      revenueChange: ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100,
-      ordersChange: ((todayOrders - yesterdayOrders) / yesterdayOrders) * 100,
-      customersChange: 15.3,
-      aovChange: 3.2,
-      revenueTrend,
-      ordersByStatus,
-      ordersByHour,
-      popularItems,
-      topCustomers,
-      reservationStats: {
-        upcomingCount: 24,
-        todayCount: 12,
-        noShowRate: 4.5,
-        averagePartySize: 3.2,
-      },
-    };
-  }
 
   if (isLoading) {
     return (
@@ -251,9 +158,27 @@ export function BusinessAnalyticsPage() {
 
   if (!analytics) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <BarChart3 className="h-12 w-12 text-muted-foreground" />
-        <p className="text-muted-foreground">No analytics data available</p>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Analytics</h1>
+          <p className="text-muted-foreground mt-1">Business performance insights</p>
+        </div>
+        <Card className="bg-card border-border/50">
+          <CardContent className="flex flex-col items-center justify-center py-16 gap-4">
+            <BarChart3 className="h-16 w-16 text-muted-foreground/40" />
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-foreground">No analytics data yet</h3>
+              <p className="text-sm text-muted-foreground mt-1 max-w-md">
+                Analytics data will appear here once your business starts receiving orders and reservations.
+                Check back after your first day of activity.
+              </p>
+            </div>
+            <Button variant="outline" onClick={() => refetch()} className="mt-2">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
