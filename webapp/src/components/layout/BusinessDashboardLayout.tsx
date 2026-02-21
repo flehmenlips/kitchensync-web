@@ -32,6 +32,7 @@ import {
   Check,
   Loader2,
   BarChart3,
+  FileImage,
 } from 'lucide-react';
 
 // Helper function to format business type for display
@@ -54,6 +55,7 @@ const navItems: NavItem[] = [
   { title: 'Reservations', href: '/business/reservations', icon: CalendarDays },
   { title: 'Orders', href: '/business/orders', icon: ShoppingBag },
   { title: 'Menu', href: '/business/menu', icon: BookOpen },
+  { title: 'Posts', href: '/business/posts', icon: FileImage },
   { title: 'Customers', href: '/business/customers', icon: Users, section: 'Management' },
   { title: 'Analytics', href: '/business/analytics', icon: BarChart3, section: 'Management' },
   { title: 'Team', href: '/business/team', icon: UserCog, section: 'Management' },

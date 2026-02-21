@@ -57,6 +57,8 @@ import {
   Trash2,
   AlertTriangle,
   Globe,
+  ArrowUpDown,
+  Users as UsersIcon,
 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -103,14 +105,30 @@ interface BusinessDetails extends Business {
   phone?: string | null;
   description?: string | null;
   addressLine1?: string | null;
+  addressLine2?: string | null;
+  postalCode?: string | null;
   websiteUrl?: string | null;
   brandColor?: string;
+  subscriptionTier?: string | null;
+  subscriptionStatus?: string | null;
+  trialEndsAt?: string | null;
   hours?: Array<{
     dayOfWeek: number;
     openTime: string | null;
     closeTime: string | null;
     isClosed: boolean;
   }>;
+}
+
+interface TeamMember {
+  id: string;
+  role: string;
+  user?: {
+    id: string;
+    email: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+  };
 }
 
 interface RelatedCounts {
@@ -129,9 +147,14 @@ export function BusinessesPage() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [verifiedFilter, setVerifiedFilter] = useState<'all' | 'verified' | 'pending'>('all');
   const [selectedBusiness, setSelectedBusiness] = useState<BusinessDetails | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [sortField, setSortField] = useState<'name' | 'type' | 'date' | 'status'>('date');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   // Verification states
   const [isVerifyDialogOpen, setIsVerifyDialogOpen] = useState(false);
@@ -165,12 +188,16 @@ export function BusinessesPage() {
   const openBusinessDetail = async (business: Business) => {
     setIsLoadingDetails(true);
     setIsDetailOpen(true);
+    setTeamMembers([]);
 
     try {
-      const data = await api.get<BusinessDetails>(`/api/business/${business.id}`);
-      setSelectedBusiness(data);
+      const [details, team] = await Promise.all([
+        api.get<BusinessDetails>(`/api/business/${business.id}`),
+        api.get<TeamMember[]>(`/api/business/${business.id}/team`).catch(() => [] as TeamMember[]),
+      ]);
+      setSelectedBusiness(details);
+      setTeamMembers(team || []);
     } catch (error) {
-      // Fallback to basic business info
       setSelectedBusiness(business);
     } finally {
       setIsLoadingDetails(false);
@@ -296,15 +323,34 @@ export function BusinessesPage() {
     }
   };
 
-  const filteredBusinesses = businesses?.filter((business) => {
-    const searchLower = searchQuery.toLowerCase();
-    const matchesSearch =
-      business.businessName.toLowerCase().includes(searchLower) ||
-      (business.city?.toLowerCase().includes(searchLower) ?? false) ||
-      (business.owner?.email?.toLowerCase().includes(searchLower) ?? false);
+  const filteredBusinesses = businesses
+    ?.filter((business) => {
+      const searchLower = searchQuery.toLowerCase();
+      const matchesSearch =
+        business.businessName.toLowerCase().includes(searchLower) ||
+        (business.city?.toLowerCase().includes(searchLower) ?? false) ||
+        (business.owner?.email?.toLowerCase().includes(searchLower) ?? false);
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'active' && business.isActive) ||
+        (statusFilter === 'inactive' && !business.isActive);
+      const matchesVerified =
+        verifiedFilter === 'all' ||
+        (verifiedFilter === 'verified' && business.isVerified) ||
+        (verifiedFilter === 'pending' && !business.isVerified);
 
-    return matchesSearch;
-  });
+      return matchesSearch && matchesStatus && matchesVerified;
+    })
+    .sort((a, b) => {
+      const dir = sortDir === 'asc' ? 1 : -1;
+      switch (sortField) {
+        case 'name': return dir * a.businessName.localeCompare(b.businessName);
+        case 'type': return dir * a.businessType.localeCompare(b.businessType);
+        case 'status': return dir * (Number(a.isActive) - Number(b.isActive));
+        case 'date': return dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        default: return 0;
+      }
+    });
 
   const getBusinessTypeInfo = (type: string) => {
     const found = businessTypes.find((t) => t.value === type);
@@ -406,29 +452,51 @@ export function BusinessesPage() {
       {/* Search and Filter */}
       <Card className="bg-card border-border/50">
         <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by name, city, or owner email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-secondary/50"
-              />
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name, city, or owner email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-secondary/50"
+                />
+              </div>
+              <Select value={typeFilter} onValueChange={(value: TypeFilter) => setTypeFilter(value)}>
+                <SelectTrigger className="w-full sm:w-[160px] bg-secondary/50">
+                  <SelectValue placeholder="Filter by type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  {businessTypes.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={statusFilter} onValueChange={(v: 'all' | 'active' | 'inactive') => setStatusFilter(v)}>
+                <SelectTrigger className="w-full sm:w-[140px] bg-secondary/50">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={verifiedFilter} onValueChange={(v: 'all' | 'verified' | 'pending') => setVerifiedFilter(v)}>
+                <SelectTrigger className="w-full sm:w-[150px] bg-secondary/50">
+                  <SelectValue placeholder="Verification" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Verification</SelectItem>
+                  <SelectItem value="verified">Verified</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Select value={typeFilter} onValueChange={(value: TypeFilter) => setTypeFilter(value)}>
-              <SelectTrigger className="w-full sm:w-[180px] bg-secondary/50">
-                <SelectValue placeholder="Filter by type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                {businessTypes.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
         </CardContent>
       </Card>
@@ -447,11 +515,31 @@ export function BusinessesPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="border-border/50">
-                    <TableHead className="text-muted-foreground">Business</TableHead>
-                    <TableHead className="text-muted-foreground hidden md:table-cell">Type</TableHead>
-                    <TableHead className="text-muted-foreground hidden md:table-cell">Status</TableHead>
+                    <TableHead
+                      className="text-muted-foreground cursor-pointer select-none hover:text-foreground"
+                      onClick={() => { setSortField('name'); setSortDir(sortField === 'name' && sortDir === 'asc' ? 'desc' : 'asc'); }}
+                    >
+                      <span className="flex items-center gap-1">Business {sortField === 'name' && <ArrowUpDown className="h-3 w-3" />}</span>
+                    </TableHead>
+                    <TableHead
+                      className="text-muted-foreground hidden md:table-cell cursor-pointer select-none hover:text-foreground"
+                      onClick={() => { setSortField('type'); setSortDir(sortField === 'type' && sortDir === 'asc' ? 'desc' : 'asc'); }}
+                    >
+                      <span className="flex items-center gap-1">Type {sortField === 'type' && <ArrowUpDown className="h-3 w-3" />}</span>
+                    </TableHead>
+                    <TableHead
+                      className="text-muted-foreground hidden md:table-cell cursor-pointer select-none hover:text-foreground"
+                      onClick={() => { setSortField('status'); setSortDir(sortField === 'status' && sortDir === 'asc' ? 'desc' : 'asc'); }}
+                    >
+                      <span className="flex items-center gap-1">Status {sortField === 'status' && <ArrowUpDown className="h-3 w-3" />}</span>
+                    </TableHead>
                     <TableHead className="text-muted-foreground hidden lg:table-cell">Owner Email</TableHead>
-                    <TableHead className="text-muted-foreground hidden lg:table-cell">Created</TableHead>
+                    <TableHead
+                      className="text-muted-foreground hidden lg:table-cell cursor-pointer select-none hover:text-foreground"
+                      onClick={() => { setSortField('date'); setSortDir(sortField === 'date' && sortDir === 'asc' ? 'desc' : 'asc'); }}
+                    >
+                      <span className="flex items-center gap-1">Created {sortField === 'date' && <ArrowUpDown className="h-3 w-3" />}</span>
+                    </TableHead>
                     <TableHead className="text-muted-foreground text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -680,8 +768,10 @@ export function BusinessesPage() {
                       <span className="text-foreground">
                         {[
                           selectedBusiness.addressLine1,
+                          selectedBusiness.addressLine2,
                           selectedBusiness.city,
-                          selectedBusiness.state
+                          selectedBusiness.state,
+                          selectedBusiness.postalCode,
                         ].filter(Boolean).join(', ')}
                       </span>
                     </div>
@@ -708,6 +798,72 @@ export function BusinessesPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Subscription Info */}
+              {(selectedBusiness.subscriptionTier || selectedBusiness.subscriptionStatus) ? (
+                <div className="space-y-3">
+                  <h4 className="font-medium text-foreground text-sm">Subscription</h4>
+                  <div className="grid gap-2">
+                    {selectedBusiness.subscriptionTier ? (
+                      <div className="flex items-center gap-3 text-sm">
+                        <Store className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Tier:</span>
+                        <Badge variant="secondary" className="capitalize">{selectedBusiness.subscriptionTier}</Badge>
+                      </div>
+                    ) : null}
+                    {selectedBusiness.subscriptionStatus ? (
+                      <div className="flex items-center gap-3 text-sm">
+                        <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Status:</span>
+                        <Badge variant={selectedBusiness.subscriptionStatus === 'active' ? 'default' : 'secondary'} className="capitalize">
+                          {selectedBusiness.subscriptionStatus}
+                        </Badge>
+                      </div>
+                    ) : null}
+                    {selectedBusiness.trialEndsAt ? (
+                      <div className="flex items-center gap-3 text-sm">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Trial ends:</span>
+                        <span className="text-foreground">{format(new Date(selectedBusiness.trialEndsAt), 'MMMM d, yyyy')}</span>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Team Members */}
+              {teamMembers.length > 0 ? (
+                <div className="space-y-3">
+                  <h4 className="font-medium text-foreground text-sm flex items-center gap-2">
+                    <UsersIcon className="h-4 w-4" />
+                    Team ({teamMembers.length})
+                  </h4>
+                  <div className="grid gap-2">
+                    {teamMembers.map((member) => (
+                      <div key={member.id} className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                            {member.user?.avatarUrl ? (
+                              <img src={member.user.avatarUrl} alt="" className="w-full h-full object-cover rounded-full" />
+                            ) : (
+                              <User className="h-4 w-4 text-primary" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-foreground">
+                              {member.user?.displayName || member.user?.email || 'Unknown'}
+                            </p>
+                            {member.user?.email && member.user?.displayName ? (
+                              <p className="text-xs text-muted-foreground">{member.user.email}</p>
+                            ) : null}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="capitalize text-xs">{member.role}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
               {/* Business Hours */}
               {selectedBusiness.hours && selectedBusiness.hours.length > 0 ? (
