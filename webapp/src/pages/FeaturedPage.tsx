@@ -402,73 +402,14 @@ export function FeaturedPage() {
           </div>
         </TabsContent>
 
-        {/* Featured Creators Tab (Placeholder) */}
+        {/* Featured Creators Tab */}
         <TabsContent value="creators" className="mt-6">
-          <Card className="bg-card border-border/50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Award className="h-5 w-5 text-primary" />
-                Featured Creators
-              </CardTitle>
-              <CardDescription>
-                Highlight verified creators and their culinary content
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="py-12">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Users className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold text-foreground mb-2">
-                  Coming Soon
-                </h3>
-                <p className="text-muted-foreground max-w-md mx-auto">
-                  Featured Creators will allow you to highlight verified culinary experts
-                  and food enthusiasts. This feature will be available in Phase 4: Creator Tools.
-                </p>
-                <div className="mt-6 flex flex-wrap justify-center gap-2">
-                  <Badge variant="outline">Verification Workflow</Badge>
-                  <Badge variant="outline">Creator Analytics</Badge>
-                  <Badge variant="outline">Profile Badges</Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <FeaturedCreatorsTab />
         </TabsContent>
 
-        {/* Trending Tags Tab (Placeholder) */}
+        {/* Trending Tags Tab */}
         <TabsContent value="tags" className="mt-6">
-          <Card className="bg-card border-border/50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                Trending Tags
-              </CardTitle>
-              <CardDescription>
-                Monitor and curate popular hashtags across the platform
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="py-12">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Hash className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold text-foreground mb-2">
-                  Coming Soon
-                </h3>
-                <p className="text-muted-foreground max-w-md mx-auto">
-                  Trending Tags will show real-time hashtag analytics and allow you to
-                  curate featured tags. This feature will be available in Phase 3: Social Management.
-                </p>
-                <div className="mt-6 flex flex-wrap justify-center gap-2">
-                  <Badge variant="outline">#trending</Badge>
-                  <Badge variant="outline">#seasonal</Badge>
-                  <Badge variant="outline">#quickmeals</Badge>
-                  <Badge variant="outline">#homemade</Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <TrendingTagsTab />
         </TabsContent>
       </Tabs>
 
@@ -623,5 +564,159 @@ export function FeaturedPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+function FeaturedCreatorsTab() {
+  const { data: creators = [], isLoading } = useQuery({
+    queryKey: ['featured-creators'],
+    queryFn: async () => {
+      const { data: verified } = await supabase
+        .from('verification_requests')
+        .select('user_id, verification_type, status, verified_at')
+        .eq('status', 'approved')
+        .order('verified_at', { ascending: false });
+
+      if (!verified?.length) return [];
+
+      const userIds = verified.map(v => v.user_id);
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('user_id, display_name, kitchen_name, handle, avatar_url, bio, follower_count, shared_recipe_count')
+        .in('user_id', userIds);
+
+      const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
+
+      return verified.map((v: any) => {
+        const p: any = profileMap.get(v.user_id) || {};
+        return {
+          userId: v.user_id,
+          displayName: p.display_name || p.kitchen_name || 'Creator',
+          handle: p.handle,
+          avatarUrl: p.avatar_url,
+          bio: p.bio,
+          followerCount: p.follower_count || 0,
+          recipeCount: p.shared_recipe_count || 0,
+          verificationType: v.verification_type,
+          verifiedAt: v.verified_at,
+        };
+      });
+    },
+  });
+
+  if (isLoading) return <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-20 w-full" />)}</div>;
+
+  return (
+    <Card className="bg-card border-border/50">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Award className="h-5 w-5 text-primary" />
+          Verified Creators ({creators.length})
+        </CardTitle>
+        <CardDescription>Verified culinary creators on the platform</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {creators.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Users className="h-10 w-10 mx-auto mb-2 opacity-30" />
+            <p>No verified creators yet</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {creators.map((creator: any) => (
+              <div key={creator.userId} className="flex items-center gap-4 p-3 rounded-lg bg-secondary/30">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                  {creator.avatarUrl ? (
+                    <img src={creator.avatarUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <Users className="h-5 w-5 text-primary" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-foreground truncate">{creator.displayName}</p>
+                  {creator.handle && <p className="text-xs text-muted-foreground">@{creator.handle}</p>}
+                  {creator.bio && <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{creator.bio}</p>}
+                </div>
+                <div className="text-right text-xs text-muted-foreground space-y-1">
+                  <p>{creator.followerCount} followers</p>
+                  <p>{creator.recipeCount} recipes</p>
+                </div>
+                <Badge variant="outline" className="capitalize text-xs">{creator.verificationType}</Badge>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function TrendingTagsTab() {
+  const { data: tags = [], isLoading } = useQuery({
+    queryKey: ['trending-tags'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('hashtags')
+        .select('*')
+        .order('trending_score', { ascending: false })
+        .limit(50);
+
+      if (error) return [];
+      return (data || []).map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        useCount: t.use_count || 0,
+        trendingScore: t.trending_score || 0,
+        createdAt: t.created_at,
+      }));
+    },
+  });
+
+  if (isLoading) return <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-12 w-full" />)}</div>;
+
+  const maxScore = Math.max(...tags.map((t: any) => t.trendingScore), 1);
+
+  return (
+    <Card className="bg-card border-border/50">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-primary" />
+          Trending Hashtags ({tags.length})
+        </CardTitle>
+        <CardDescription>Most popular and trending hashtags across the platform</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {tags.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Hash className="h-10 w-10 mx-auto mb-2 opacity-30" />
+            <p>No hashtags yet</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {tags.map((tag: any, idx: number) => (
+              <div key={tag.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/30 transition-colors">
+                <span className="text-sm font-mono text-muted-foreground w-6 text-right">{idx + 1}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Hash className="h-3.5 w-3.5 text-primary" />
+                    <span className="font-semibold text-foreground">{tag.name}</span>
+                  </div>
+                  <div className="mt-1 h-1.5 bg-secondary rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary/60 rounded-full"
+                      style={{ width: `${(tag.trendingScore / maxScore) * 100}%` }}
+                    />
+                  </div>
+                </div>
+                <div className="text-right text-xs text-muted-foreground">
+                  <p>{tag.useCount} uses</p>
+                  <p className="text-[10px]">score: {tag.trendingScore.toFixed(1)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
