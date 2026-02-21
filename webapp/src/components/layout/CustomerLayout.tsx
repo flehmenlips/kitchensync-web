@@ -26,6 +26,8 @@ import {
   Image as ImageIcon,
   Sparkles,
   MessageCircle,
+  Trophy,
+  CalendarDays,
 } from 'lucide-react';
 
 interface TabItem {
@@ -158,6 +160,14 @@ export function CustomerLayout() {
                 <DropdownMenuItem onClick={() => navigate('/app/messages')}>
                   <MessageCircle className="h-4 w-4 mr-2" />
                   Messages
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/app/challenges')}>
+                  <Trophy className="h-4 w-4 mr-2" />
+                  Challenges
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/app/events')}>
+                  <CalendarDays className="h-4 w-4 mr-2" />
+                  Events
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate('/app/inbox')}>
                   <Inbox className="h-4 w-4 mr-2" />
