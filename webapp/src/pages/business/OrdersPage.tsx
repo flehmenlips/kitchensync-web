@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,9 +45,11 @@ import {
   CreditCard,
   Receipt,
 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { api } from '@/lib/api';
 import { useBusiness } from '@/contexts/BusinessContext';
 import { format, formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
 
 interface OrderItem {
   id: string;
@@ -99,6 +101,34 @@ interface OrderStats {
   averageOrderValue: number;
 }
 
+interface MenuItem {
+  id: string;
+  name: string;
+  price: number;
+  categoryId: string;
+  categoryName?: string;
+}
+
+interface MenuCategory {
+  id: string;
+  name: string;
+  items: MenuItem[];
+}
+
+interface RestaurantTable {
+  id: string;
+  tableNumber: string;
+  section: string | null;
+}
+
+interface CartItem {
+  menuItemId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  specialRequests: string;
+}
+
 export function BusinessOrdersPage() {
   const { business } = useBusiness();
   const queryClient = useQueryClient();
@@ -110,6 +140,18 @@ export function BusinessOrdersPage() {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+
+  // New Order state
+  const [newOrderOpen, setNewOrderOpen] = useState(false);
+  const [newOrderType, setNewOrderType] = useState<string>('dine_in');
+  const [newCustomerName, setNewCustomerName] = useState('');
+  const [newCustomerEmail, setNewCustomerEmail] = useState('');
+  const [newCustomerPhone, setNewCustomerPhone] = useState('');
+  const [newTableId, setNewTableId] = useState<string>('');
+  const [newSpecialInstructions, setNewSpecialInstructions] = useState('');
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
+  const [menuSearch, setMenuSearch] = useState('');
 
   // Fetch orders
   const { data: ordersData, isLoading } = useQuery({
@@ -161,6 +203,103 @@ export function BusinessOrdersPage() {
       queryClient.invalidateQueries({ queryKey: ['order-stats', businessId] });
     },
   });
+
+  const { data: menuCategories = [] } = useQuery({
+    queryKey: ['menu-categories', businessId],
+    queryFn: async () => {
+      if (!businessId) return [];
+      const data = await api.get<{ id: string; name: string }[]>(`/api/menu/${businessId}/categories`);
+      const cats: MenuCategory[] = [];
+      for (const cat of data || []) {
+        const items = await api.get<MenuItem[]>(`/api/menu/${businessId}/categories/${cat.id}/items`).catch(() => []);
+        cats.push({ id: cat.id, name: cat.name, items: (items || []).map((it) => ({ ...it, categoryName: cat.name })) });
+      }
+      return cats;
+    },
+    enabled: !!businessId && newOrderOpen,
+  });
+
+  const allMenuItems = useMemo(() => menuCategories.flatMap((c) => c.items), [menuCategories]);
+
+  const filteredMenuItems = useMemo(() => {
+    if (!menuSearch.trim()) return allMenuItems;
+    const q = menuSearch.toLowerCase();
+    return allMenuItems.filter((it) => it.name.toLowerCase().includes(q));
+  }, [allMenuItems, menuSearch]);
+
+  const { data: tables = [] } = useQuery({
+    queryKey: ['tables', businessId],
+    queryFn: async () => {
+      if (!businessId) return [];
+      return api.get<RestaurantTable[]>(`/api/business/${businessId}/tables`).catch(() => [] as RestaurantTable[]);
+    },
+    enabled: !!businessId && newOrderOpen && newOrderType === 'dine_in',
+  });
+
+  const addToCart = (item: MenuItem) => {
+    setCart((prev) => {
+      const existing = prev.find((c) => c.menuItemId === item.id);
+      if (existing) {
+        return prev.map((c) => c.menuItemId === item.id ? { ...c, quantity: c.quantity + 1 } : c);
+      }
+      return [...prev, { menuItemId: item.id, name: item.name, price: item.price, quantity: 1, specialRequests: '' }];
+    });
+  };
+
+  const removeFromCart = (menuItemId: string) => {
+    setCart((prev) => prev.filter((c) => c.menuItemId !== menuItemId));
+  };
+
+  const updateCartQty = (menuItemId: string, delta: number) => {
+    setCart((prev) =>
+      prev
+        .map((c) => c.menuItemId === menuItemId ? { ...c, quantity: Math.max(0, c.quantity + delta) } : c)
+        .filter((c) => c.quantity > 0)
+    );
+  };
+
+  const cartSubtotal = cart.reduce((sum, c) => sum + c.price * c.quantity, 0);
+
+  const resetNewOrder = () => {
+    setNewOrderType('dine_in');
+    setNewCustomerName('');
+    setNewCustomerEmail('');
+    setNewCustomerPhone('');
+    setNewTableId('');
+    setNewSpecialInstructions('');
+    setCart([]);
+    setMenuSearch('');
+  };
+
+  const handleCreateOrder = async () => {
+    if (!businessId || !newCustomerName.trim() || cart.length === 0) return;
+    setIsCreating(true);
+    try {
+      await api.post(`/api/orders/${businessId}`, {
+        orderType: newOrderType,
+        customerName: newCustomerName.trim(),
+        customerEmail: newCustomerEmail.trim() || undefined,
+        customerPhone: newCustomerPhone.trim() || undefined,
+        tableId: newOrderType === 'dine_in' && newTableId ? newTableId : undefined,
+        specialInstructions: newSpecialInstructions.trim() || undefined,
+        source: 'pos',
+        items: cart.map((c) => ({
+          menuItemId: c.menuItemId,
+          quantity: c.quantity,
+          specialRequests: c.specialRequests.trim() || undefined,
+        })),
+      });
+      queryClient.invalidateQueries({ queryKey: ['orders', businessId] });
+      queryClient.invalidateQueries({ queryKey: ['order-stats', businessId] });
+      setNewOrderOpen(false);
+      resetNewOrder();
+      toast.success('Order created successfully');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to create order');
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   const orders = (ordersData as { data: Order[] })?.data || [];
 
@@ -272,7 +411,7 @@ export function BusinessOrdersPage() {
             Track and manage all incoming orders
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setNewOrderOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           New Order
         </Button>
@@ -501,6 +640,153 @@ export function BusinessOrdersPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* New Order Dialog */}
+      <Dialog open={newOrderOpen} onOpenChange={(open) => { if (!open) { setNewOrderOpen(false); resetNewOrder(); } }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle>Create New Order</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-5 overflow-y-auto flex-1 pr-2">
+            {/* Order Type & Customer */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Order Type</Label>
+                <Select value={newOrderType} onValueChange={setNewOrderType}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="dine_in">Dine In</SelectItem>
+                    <SelectItem value="takeout">Takeout</SelectItem>
+                    <SelectItem value="delivery">Delivery</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {newOrderType === 'dine_in' && tables.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Table</Label>
+                  <Select value={newTableId} onValueChange={setNewTableId}>
+                    <SelectTrigger><SelectValue placeholder="Select table" /></SelectTrigger>
+                    <SelectContent>
+                      {tables.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          Table {t.tableNumber}{t.section ? ` (${t.section})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Customer Name <span className="text-red-400">*</span></Label>
+                <Input value={newCustomerName} onChange={(e) => setNewCustomerName(e.target.value)} placeholder="John Doe" />
+              </div>
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input value={newCustomerEmail} onChange={(e) => setNewCustomerEmail(e.target.value)} placeholder="john@example.com" type="email" />
+              </div>
+              <div className="space-y-2">
+                <Label>Phone</Label>
+                <Input value={newCustomerPhone} onChange={(e) => setNewCustomerPhone(e.target.value)} placeholder="555-0123" />
+              </div>
+            </div>
+
+            {/* Menu Items */}
+            <div className="space-y-3">
+              <Label>Add Items</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={menuSearch}
+                  onChange={(e) => setMenuSearch(e.target.value)}
+                  placeholder="Search menu items..."
+                  className="pl-10"
+                />
+              </div>
+              <div className="max-h-48 overflow-y-auto border rounded-lg divide-y divide-border/50">
+                {filteredMenuItems.length === 0 ? (
+                  <p className="p-4 text-sm text-muted-foreground text-center">
+                    {allMenuItems.length === 0 ? 'Loading menu...' : 'No matching items'}
+                  </p>
+                ) : (
+                  filteredMenuItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between p-3 hover:bg-secondary/30 cursor-pointer transition-colors"
+                      onClick={() => addToCart(item)}
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{item.name}</p>
+                        <p className="text-xs text-muted-foreground">{item.categoryName}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">${item.price.toFixed(2)}</span>
+                        <Plus className="h-4 w-4 text-primary" />
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Cart */}
+            {cart.length > 0 && (
+              <div className="space-y-3">
+                <Label>Order Items ({cart.length})</Label>
+                <div className="border rounded-lg divide-y divide-border/50">
+                  {cart.map((item) => (
+                    <div key={item.menuItemId} className="flex items-center justify-between p-3">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-foreground">{item.name}</p>
+                        <p className="text-xs text-muted-foreground">${item.price.toFixed(2)} each</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateCartQty(item.menuItemId, -1)}>-</Button>
+                        <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateCartQty(item.menuItemId, 1)}>+</Button>
+                        <span className="w-16 text-right text-sm font-medium">${(item.price * item.quantity).toFixed(2)}</span>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400" onClick={() => removeFromCart(item.menuItemId)}>
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex justify-between p-3 font-semibold">
+                    <span>Subtotal</span>
+                    <span>${cartSubtotal.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Special Instructions */}
+            <div className="space-y-2">
+              <Label>Special Instructions</Label>
+              <Textarea
+                value={newSpecialInstructions}
+                onChange={(e) => setNewSpecialInstructions(e.target.value)}
+                placeholder="Any special requests..."
+                rows={2}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex-shrink-0">
+            <Button variant="outline" onClick={() => { setNewOrderOpen(false); resetNewOrder(); }} disabled={isCreating}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateOrder}
+              disabled={isCreating || !newCustomerName.trim() || cart.length === 0}
+            >
+              {isCreating ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Creating...</> : `Create Order ($${cartSubtotal.toFixed(2)})`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Order Details Dialog */}
       <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
