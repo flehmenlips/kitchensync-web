@@ -47,7 +47,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const adminCacheRef = useRef<{ userId: string; admin: AdminUser | null } | null>(getInitialAdminCache());
 
   const checkAdminStatus = async (userId: string, email: string, retryCount = 0): Promise<AdminUser | null> => {
-    // Return cached result if we already checked this user (including non-admin null result)
     if (adminCacheRef.current?.userId === userId) {
       console.log('Using cached admin status for:', email, adminCacheRef.current.admin ? 'is admin' : 'not admin');
       return adminCacheRef.current.admin;
@@ -56,23 +55,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('Checking admin status for userId:', userId, 'email:', email, 'attempt:', retryCount + 1);
 
-      // Query without artificial timeout - let Supabase handle it
-      const { data: profile, error: profileError } = await supabase
+      const queryPromise = supabase
         .from('user_profiles')
         .select('is_admin')
         .eq('user_id', userId)
         .maybeSingle();
 
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Admin check query timed out')), 5000)
+      );
+
+      const { data: profile, error: profileError } = await Promise.race([queryPromise, timeoutPromise]);
+
       console.log('user_profiles check:', profile, 'error:', profileError);
 
       if (profileError) {
         console.error('Error querying user_profiles:', profileError.message);
-        // Retry up to 2 times on error
-        if (retryCount < 2) {
-          console.log('Retrying admin check...');
+        if (retryCount < 1) {
           await new Promise(resolve => setTimeout(resolve, 1000));
           return checkAdminStatus(userId, email, retryCount + 1);
         }
+        adminCacheRef.current = { userId, admin: null };
+        localStorage.setItem('adminCache', JSON.stringify({ userId, admin: null }));
         return null;
       }
 
@@ -85,25 +89,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role: 'superadmin' as AdminRole,
         };
 
-        // Cache the result in memory and localStorage
         adminCacheRef.current = { userId, admin: result };
         localStorage.setItem('adminCache', JSON.stringify({ userId, admin: result }));
-
         return result;
       }
 
       console.log('User is not an admin:', email);
-      // Cache the non-admin result too to prevent repeated checks
       adminCacheRef.current = { userId, admin: null };
       localStorage.setItem('adminCache', JSON.stringify({ userId, admin: null }));
       return null;
     } catch (err) {
       console.error('Error checking admin status:', err);
-      // Retry on exception
-      if (retryCount < 2) {
+      if (retryCount < 1) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         return checkAdminStatus(userId, email, retryCount + 1);
       }
+      adminCacheRef.current = { userId, admin: null };
+      localStorage.setItem('adminCache', JSON.stringify({ userId, admin: null }));
       return null;
     }
   };
@@ -111,13 +113,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let isMounted = true;
 
-    // Safety timeout - always stop loading after 10 seconds no matter what
     const safetyTimeout = setTimeout(() => {
       if (isMounted && isLoading) {
-        console.log('Safety timeout reached - forcing loading to false');
+        console.warn('Safety timeout reached - forcing loading to false');
         setIsLoading(false);
       }
-    }, 10000);
+    }, 6000);
 
     const initAuth = async () => {
       if (!isSupabaseConfigured) {

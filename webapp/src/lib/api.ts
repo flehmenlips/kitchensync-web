@@ -16,12 +16,16 @@ interface ApiResponse<T> {
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const sessionPromise = supabase.auth.getSession();
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('getSession timed out')), 3000)
+    );
+    const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
     if (session?.access_token) {
       return { Authorization: `Bearer ${session.access_token}` };
     }
   } catch {
-    // No session available
+    // Timeout or no session available - proceed without auth
   }
   return {};
 }
