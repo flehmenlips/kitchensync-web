@@ -16,6 +16,7 @@ import {
   Share2,
 } from 'lucide-react';
 import { useTogglePostLike, useTogglePostSave } from '@/hooks/usePosts';
+import { PostImageCarousel } from './PostImageCarousel';
 import type { Post } from '@/types/posts';
 
 function timeAgo(date: string) {
@@ -108,18 +109,7 @@ export function PostCard({ post }: { post: Post }) {
 
         {/* Media */}
         {images.length > 0 && (
-          <div className="relative">
-            <img
-              src={images[0].url}
-              alt=""
-              className="w-full aspect-[4/3] object-cover bg-muted"
-            />
-            {images.length > 1 && (
-              <span className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">
-                1/{images.length}
-              </span>
-            )}
-          </div>
+          <PostImageCarousel images={images} />
         )}
         {!images.length && video && (
           <div className="relative w-full aspect-[4/3] bg-black">

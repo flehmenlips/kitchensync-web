@@ -22,6 +22,7 @@ import {
   useCreatePostComment,
   useDeletePost,
 } from '@/hooks/usePosts';
+import { PostImageCarousel } from '@/components/customer/PostImageCarousel';
 
 function timeAgo(date: string) {
   const s = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
@@ -138,7 +139,7 @@ export function PostDetailPage() {
 
           {/* Media */}
           {images.length > 0 && (
-            <img src={images[0].url} alt="" className="w-full aspect-[4/3] object-cover" />
+            <PostImageCarousel images={images} />
           )}
           {!images.length && video && (
             <div className="w-full aspect-[4/3] bg-black">
