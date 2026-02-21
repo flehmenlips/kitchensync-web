@@ -202,6 +202,18 @@ export function ReservationsPage() {
   const [isNewReservationOpen, setIsNewReservationOpen] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    customerName: '',
+    customerEmail: '',
+    customerPhone: '',
+    date: '',
+    time: '',
+    partySize: '2',
+    seatingPreference: 'no_preference' as SeatingPreference,
+    specialRequests: '',
+    occasion: 'none' as Occasion,
+  });
 
   // Loading states
   const [isLoadingReservations, setIsLoadingReservations] = useState(false);
@@ -471,6 +483,59 @@ export function ReservationsPage() {
       toast({
         title: 'Error',
         description: 'Failed to update table assignment',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openEditReservation = (reservation: Reservation) => {
+    setEditForm({
+      customerName: reservation.customerName,
+      customerEmail: reservation.customerEmail,
+      customerPhone: reservation.customerPhone,
+      date: reservation.date,
+      time: reservation.time,
+      partySize: reservation.partySize.toString(),
+      seatingPreference: reservation.seatingPreference,
+      specialRequests: reservation.specialRequests || '',
+      occasion: reservation.occasion,
+    });
+    setIsEditOpen(true);
+  };
+
+  const handleEditReservation = async () => {
+    if (!selectedReservation || !business?.id) return;
+    if (!editForm.customerName || !editForm.customerEmail || !editForm.time) return;
+
+    setIsSubmitting(true);
+    try {
+      await api.put(`/api/reservations/${business.id}/${selectedReservation.id}`, {
+        customerName: editForm.customerName,
+        customerEmail: editForm.customerEmail,
+        customerPhone: editForm.customerPhone || null,
+        reservationDate: editForm.date,
+        reservationTime: editForm.time,
+        partySize: parseInt(editForm.partySize, 10),
+        seatingPreference: editForm.seatingPreference === 'no_preference' ? null : editForm.seatingPreference,
+        specialRequests: editForm.specialRequests || null,
+        occasion: editForm.occasion === 'none' ? null : editForm.occasion,
+      });
+
+      toast({
+        title: 'Reservation Updated',
+        description: `Reservation for ${editForm.customerName} has been updated`,
+      });
+
+      setIsEditOpen(false);
+      await fetchReservations();
+      setSelectedReservation(null);
+    } catch (err) {
+      console.error('Error updating reservation:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to update reservation',
         variant: 'destructive',
       });
     } finally {
@@ -820,10 +885,9 @@ export function ReservationsPage() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="icon">
+                    <Button variant="outline" size="icon" onClick={() => openEditReservation(selectedReservation)}>
                       <Edit2 className="h-4 w-4" />
                     </Button>
-                    {/* Delete button hidden - no delete endpoint */}
                   </div>
                 </div>
               </CardHeader>
@@ -1065,6 +1129,110 @@ export function ReservationsPage() {
           )}
         </div>
       </div>
+
+      {/* Edit Reservation Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Reservation</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Customer Name *</label>
+              <Input
+                placeholder="Full name"
+                value={editForm.customerName}
+                onChange={(e) => setEditForm({ ...editForm, customerName: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Email *</label>
+                <Input
+                  type="email"
+                  value={editForm.customerEmail}
+                  onChange={(e) => setEditForm({ ...editForm, customerEmail: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Phone</label>
+                <Input
+                  value={editForm.customerPhone}
+                  onChange={(e) => setEditForm({ ...editForm, customerPhone: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Time *</label>
+                <Select value={editForm.time} onValueChange={(value) => setEditForm({ ...editForm, time: value })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {defaultTimeSlots.map((slot) => (
+                      <SelectItem key={slot} value={slot}>{formatTime(slot)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Party Size</label>
+                <Select value={editForm.partySize} onValueChange={(value) => setEditForm({ ...editForm, partySize: value })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[1,2,3,4,5,6,7,8,9,10,11,12].map((s) => (
+                      <SelectItem key={s} value={s.toString()}>{s} {s === 1 ? 'guest' : 'guests'}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Seating</label>
+                <Select value={editForm.seatingPreference} onValueChange={(v) => setEditForm({ ...editForm, seatingPreference: v as SeatingPreference })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="no_preference">No Preference</SelectItem>
+                    <SelectItem value="indoor">Indoor</SelectItem>
+                    <SelectItem value="outdoor">Outdoor</SelectItem>
+                    <SelectItem value="patio">Patio</SelectItem>
+                    <SelectItem value="bar">Bar</SelectItem>
+                    <SelectItem value="private_room">Private Room</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Occasion</label>
+                <Select value={editForm.occasion} onValueChange={(v) => setEditForm({ ...editForm, occasion: v as Occasion })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="birthday">Birthday</SelectItem>
+                    <SelectItem value="anniversary">Anniversary</SelectItem>
+                    <SelectItem value="business">Business</SelectItem>
+                    <SelectItem value="date_night">Date Night</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Special Requests</label>
+              <Textarea
+                value={editForm.specialRequests}
+                onChange={(e) => setEditForm({ ...editForm, specialRequests: e.target.value })}
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditOpen(false)} disabled={isSubmitting}>Cancel</Button>
+            <Button onClick={handleEditReservation} disabled={isSubmitting || !editForm.customerName || !editForm.time}>
+              {isSubmitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</> : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
