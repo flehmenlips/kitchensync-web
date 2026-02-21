@@ -229,8 +229,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
             setError('Business not found');
           }
         } else {
-          // Fetch businesses owned/managed by the current user
-          const data = await api.get<BusinessListApiResponse[]>(`/api/business/user/${user.id}`);
+          const data = await api.get<BusinessListApiResponse[]>(`/api/business/user/me`);
           const mapped = (data || []).map(mapApiBusinessList);
           setBusinesses(mapped);
 
