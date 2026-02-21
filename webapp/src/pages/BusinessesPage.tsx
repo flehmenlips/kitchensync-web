@@ -64,8 +64,7 @@ import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-
-const baseUrl = import.meta.env.VITE_BACKEND_URL;
+import { api } from '@/lib/api';
 
 // Business type options
 const businessTypes = [
@@ -157,15 +156,8 @@ export function BusinessesPage() {
   const { data: businesses, isLoading } = useQuery({
     queryKey: ['businesses', typeFilter],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (typeFilter !== 'all') {
-        params.set('type', typeFilter);
-      }
-      const url = `${baseUrl}/api/business${params.toString() ? `?${params}` : ''}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch businesses');
-      const json = await res.json();
-      return json.data as Business[];
+      const params = typeFilter !== 'all' ? `?type=${typeFilter}` : '';
+      return api.get<Business[]>(`/api/business${params}`);
     },
   });
 
@@ -174,10 +166,8 @@ export function BusinessesPage() {
     setIsDetailOpen(true);
 
     try {
-      const res = await fetch(`${baseUrl}/api/business/${business.id}`);
-      if (!res.ok) throw new Error('Failed to fetch business details');
-      const json = await res.json();
-      setSelectedBusiness(json.data as BusinessDetails);
+      const data = await api.get<BusinessDetails>(`/api/business/${business.id}`);
+      setSelectedBusiness(data);
     } catch (error) {
       // Fallback to basic business info
       setSelectedBusiness(business);
@@ -191,22 +181,11 @@ export function BusinessesPage() {
 
     setIsSubmitting(true);
     try {
-      const res = await fetch(`${baseUrl}/api/business/${selectedBusiness.id}/verify`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          adminId: user.id,
-          notes: verificationNotes || undefined,
-        }),
+      const data = await api.put<BusinessDetails>(`/api/business/${selectedBusiness.id}/verify`, {
+        adminId: user.id,
+        notes: verificationNotes || undefined,
       });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error?.message || 'Failed to verify business');
-      }
-
-      const json = await res.json();
-      setSelectedBusiness({ ...selectedBusiness, ...json.data, isVerified: true });
+      setSelectedBusiness({ ...selectedBusiness, ...data, isVerified: true });
       queryClient.invalidateQueries({ queryKey: ['businesses'] });
       setIsVerifyDialogOpen(false);
       setVerificationNotes('');
@@ -223,22 +202,11 @@ export function BusinessesPage() {
 
     setIsSubmitting(true);
     try {
-      const res = await fetch(`${baseUrl}/api/business/${selectedBusiness.id}/reject`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          adminId: user.id,
-          reason: rejectionReason,
-        }),
+      const data = await api.put<BusinessDetails>(`/api/business/${selectedBusiness.id}/reject`, {
+        adminId: user.id,
+        reason: rejectionReason,
       });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error?.message || 'Failed to reject business');
-      }
-
-      const json = await res.json();
-      setSelectedBusiness({ ...selectedBusiness, ...json.data, isVerified: false });
+      setSelectedBusiness({ ...selectedBusiness, ...data, isVerified: false });
       queryClient.invalidateQueries({ queryKey: ['businesses'] });
       setIsRejectDialogOpen(false);
       setRejectionReason('');
@@ -256,23 +224,12 @@ export function BusinessesPage() {
     const newActiveState = !selectedBusiness.isActive;
     setIsSubmitting(true);
     try {
-      const res = await fetch(`${baseUrl}/api/business/${selectedBusiness.id}/toggle-active`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          adminId: user.id,
-          isActive: newActiveState,
-          reason: toggleActiveReason || undefined,
-        }),
+      const data = await api.put<BusinessDetails>(`/api/business/${selectedBusiness.id}/toggle-active`, {
+        adminId: user.id,
+        isActive: newActiveState,
+        reason: toggleActiveReason || undefined,
       });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error?.message || 'Failed to update business status');
-      }
-
-      const json = await res.json();
-      setSelectedBusiness({ ...selectedBusiness, ...json.data, isActive: newActiveState });
+      setSelectedBusiness({ ...selectedBusiness, ...data, isActive: newActiveState });
       queryClient.invalidateQueries({ queryKey: ['businesses'] });
       setIsToggleActiveDialogOpen(false);
       setToggleActiveReason('');
@@ -294,11 +251,8 @@ export function BusinessesPage() {
     setIsLoadingRelatedCounts(true);
 
     try {
-      const res = await fetch(`${baseUrl}/api/business/${business.id}/related-counts`);
-      if (res.ok) {
-        const json = await res.json();
-        setRelatedCounts(json.data);
-      }
+      const data = await api.get<RelatedCounts>(`/api/business/${business.id}/related-counts`);
+      if (data) setRelatedCounts(data);
     } catch (error) {
       // Silently fail - counts are informational only
     } finally {
@@ -312,23 +266,10 @@ export function BusinessesPage() {
 
     setIsDeleting(true);
     try {
-      const url = deleteType === 'permanent'
-        ? `${baseUrl}/api/business/${businessToDelete.id}?hard=true`
-        : `${baseUrl}/api/business/${businessToDelete.id}`;
-
-      const res = await fetch(url, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          adminId: user.id,
-          reason: deleteReason || undefined,
-        }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error?.message || 'Failed to delete business');
-      }
+      const endpoint = deleteType === 'permanent'
+        ? `/api/business/${businessToDelete.id}?hard=true`
+        : `/api/business/${businessToDelete.id}`;
+      await api.delete(endpoint);
 
       queryClient.invalidateQueries({ queryKey: ['businesses'] });
       setIsDeleteDialogOpen(false);
