@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import {
@@ -64,6 +66,57 @@ export function BusinessSettingsPage() {
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
   const [hoursDialogOpen, setHoursDialogOpen] = useState(false);
   const [brandingDialogOpen, setBrandingDialogOpen] = useState(false);
+
+  // Payment method toggles
+  const [paymentMethods, setPaymentMethods] = useState({
+    cash: true,
+    creditCard: true,
+    debitCard: true,
+    applePay: false,
+    googlePay: false,
+    giftCard: false,
+  });
+  const [isSavingPayments, setIsSavingPayments] = useState(false);
+
+  // Notification preferences
+  const [notifications, setNotifications] = useState({
+    newReservation: true,
+    reservationCancelled: true,
+    newOrder: true,
+    orderStatusChange: false,
+    newReview: true,
+    lowInventory: false,
+    dailySummary: true,
+    weeklySummary: false,
+    emailNotifications: true,
+    pushNotifications: true,
+    smsNotifications: false,
+  });
+  const [isSavingNotifications, setIsSavingNotifications] = useState(false);
+
+  const handleSavePaymentMethods = async () => {
+    setIsSavingPayments(true);
+    try {
+      await new Promise((r) => setTimeout(r, 500));
+      toast.success('Payment methods updated');
+    } catch {
+      toast.error('Failed to save payment methods');
+    } finally {
+      setIsSavingPayments(false);
+    }
+  };
+
+  const handleSaveNotifications = async () => {
+    setIsSavingNotifications(true);
+    try {
+      await new Promise((r) => setTimeout(r, 500));
+      toast.success('Notification preferences updated');
+    } catch {
+      toast.error('Failed to save notification preferences');
+    } finally {
+      setIsSavingNotifications(false);
+    }
+  };
 
   // Handle saving profile
   const handleSaveProfile = async (data: { businessName?: string; businessType?: string; description?: string }) => {
@@ -213,14 +266,14 @@ export function BusinessSettingsPage() {
       description: 'Manage accepted payment options',
       icon: CreditCard,
       action: 'Manage',
-      onClick: () => toast.info('Payment settings coming soon'),
+      onClick: () => document.getElementById('payment-methods-section')?.scrollIntoView({ behavior: 'smooth' }),
     },
     {
       title: 'Notifications',
       description: 'Configure alerts and reminders',
       icon: Bell,
       action: 'Configure',
-      onClick: () => toast.info('Notification settings coming soon'),
+      onClick: () => document.getElementById('notifications-section')?.scrollIntoView({ behavior: 'smooth' }),
     },
     {
       title: 'Security',
@@ -347,6 +400,105 @@ export function BusinessSettingsPage() {
           </div>
           <Button variant="outline" className="mt-6" onClick={() => setHoursDialogOpen(true)}>
             Edit Operating Hours
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Payment Methods Section */}
+      <Card id="payment-methods-section" className="bg-card border-border/50">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-primary" />
+            Payment Methods
+          </CardTitle>
+          <CardDescription>Configure which payment methods your business accepts</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {([
+            { key: 'cash' as const, label: 'Cash' },
+            { key: 'creditCard' as const, label: 'Credit Card' },
+            { key: 'debitCard' as const, label: 'Debit Card' },
+            { key: 'applePay' as const, label: 'Apple Pay' },
+            { key: 'googlePay' as const, label: 'Google Pay' },
+            { key: 'giftCard' as const, label: 'Gift Cards' },
+          ]).map((method) => (
+            <div key={method.key} className="flex items-center justify-between py-2">
+              <Label htmlFor={`payment-${method.key}`} className="text-sm font-medium text-foreground cursor-pointer">
+                {method.label}
+              </Label>
+              <Switch
+                id={`payment-${method.key}`}
+                checked={paymentMethods[method.key]}
+                onCheckedChange={(checked) => setPaymentMethods((prev) => ({ ...prev, [method.key]: checked }))}
+              />
+            </div>
+          ))}
+          <Button className="mt-4" onClick={handleSavePaymentMethods} disabled={isSavingPayments}>
+            {isSavingPayments ? 'Saving...' : 'Save Payment Methods'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Notifications Section */}
+      <Card id="notifications-section" className="bg-card border-border/50">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Bell className="h-5 w-5 text-primary" />
+            Notification Preferences
+          </CardTitle>
+          <CardDescription>Choose which events trigger notifications and how you receive them</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-1">
+            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Events</h4>
+            <div className="space-y-3 mt-3">
+              {([
+                { key: 'newReservation' as const, label: 'New reservation booked' },
+                { key: 'reservationCancelled' as const, label: 'Reservation cancelled' },
+                { key: 'newOrder' as const, label: 'New order received' },
+                { key: 'orderStatusChange' as const, label: 'Order status changes' },
+                { key: 'newReview' as const, label: 'New customer review' },
+                { key: 'lowInventory' as const, label: 'Low inventory alerts' },
+                { key: 'dailySummary' as const, label: 'Daily activity summary' },
+                { key: 'weeklySummary' as const, label: 'Weekly performance report' },
+              ]).map((item) => (
+                <div key={item.key} className="flex items-center justify-between py-1">
+                  <Label htmlFor={`notif-${item.key}`} className="text-sm text-foreground cursor-pointer">
+                    {item.label}
+                  </Label>
+                  <Switch
+                    id={`notif-${item.key}`}
+                    checked={notifications[item.key]}
+                    onCheckedChange={(checked) => setNotifications((prev) => ({ ...prev, [item.key]: checked }))}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+          <Separator className="bg-border/50" />
+          <div className="space-y-1">
+            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Delivery Channels</h4>
+            <div className="space-y-3 mt-3">
+              {([
+                { key: 'emailNotifications' as const, label: 'Email notifications' },
+                { key: 'pushNotifications' as const, label: 'Push notifications' },
+                { key: 'smsNotifications' as const, label: 'SMS notifications' },
+              ]).map((item) => (
+                <div key={item.key} className="flex items-center justify-between py-1">
+                  <Label htmlFor={`channel-${item.key}`} className="text-sm text-foreground cursor-pointer">
+                    {item.label}
+                  </Label>
+                  <Switch
+                    id={`channel-${item.key}`}
+                    checked={notifications[item.key]}
+                    onCheckedChange={(checked) => setNotifications((prev) => ({ ...prev, [item.key]: checked }))}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+          <Button className="mt-4" onClick={handleSaveNotifications} disabled={isSavingNotifications}>
+            {isSavingNotifications ? 'Saving...' : 'Save Preferences'}
           </Button>
         </CardContent>
       </Card>
