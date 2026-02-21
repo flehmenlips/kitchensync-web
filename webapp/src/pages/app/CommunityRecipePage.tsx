@@ -91,7 +91,7 @@ export function CommunityRecipePage() {
       const { data, error } = await supabase
         .from('recipe_comments')
         .select('*')
-        .eq('recipe_id', id)
+        .eq('shared_recipe_id', id)
         .order('created_at', { ascending: true });
       if (error || !data?.length) return [];
 
@@ -217,7 +217,7 @@ export function CommunityRecipePage() {
     mutationFn: async () => {
       if (!user || !id) throw new Error('Missing data');
       const { error } = await supabase.from('recipe_comments').insert({
-        recipe_id: id,
+        shared_recipe_id: id,
         user_id: user.id,
         content: commentText.trim(),
       });
