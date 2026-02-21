@@ -28,6 +28,7 @@ import { ProductsPage } from "@/pages/ProductsPage";
 import { OrdersPage } from "@/pages/OrdersPage";
 import { PayoutsPage } from "@/pages/PayoutsPage";
 import { BusinessesPage } from "@/pages/BusinessesPage";
+import { IntelligencePage } from "@/pages/IntelligencePage";
 import NotFound from "./pages/NotFound";
 import { LandingPage } from "./pages/LandingPage";
 import { Loader2 } from "lucide-react";
@@ -184,6 +185,7 @@ function AdminBusinessRoutes() {
           <Route path="orders" element={<OrdersPage />} />
           <Route path="payouts" element={<PayoutsPage />} />
           <Route path="businesses" element={<BusinessesPage />} />
+          <Route path="intelligence" element={<IntelligencePage />} />
         </Route>
 
         {/* Business Console Routes */}

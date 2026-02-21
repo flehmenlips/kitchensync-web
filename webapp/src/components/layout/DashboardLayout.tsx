@@ -28,6 +28,7 @@ import {
   Wallet,
   Building2,
   ExternalLink,
+  Brain,
 } from 'lucide-react';
 
 interface NavItem {
@@ -41,6 +42,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { title: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { title: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
+  { title: 'Intelligence', href: '/admin/intelligence', icon: Brain },
   { title: 'Featured', href: '/admin/featured', icon: Sparkles },
   { title: 'Moderation', href: '/admin/moderation', icon: Flag },
   { title: 'Post Moderation', href: '/admin/post-moderation', icon: MessageSquareWarning },
