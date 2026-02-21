@@ -80,6 +80,8 @@ const CustomerFollowersPage = lazy(() => import("@/pages/app/FollowersPage").the
 const CustomerFollowRequestsPage = lazy(() => import("@/pages/app/FollowRequestsPage").then(m => ({ default: m.FollowRequestsPage })));
 const CustomerInboxPage = lazy(() => import("@/pages/app/InboxPage").then(m => ({ default: m.InboxPage })));
 const CustomerMessagesPage = lazy(() => import("@/pages/app/MessagesPage").then(m => ({ default: m.MessagesPage })));
+const CustomerChallengesPage = lazy(() => import("@/pages/app/ChallengesPage").then(m => ({ default: m.ChallengesPage })));
+const CustomerEventsPage = lazy(() => import("@/pages/app/EventsPage").then(m => ({ default: m.EventsPage })));
 const CustomerAIMenuPage = lazy(() => import("@/pages/app/AIMenuPage").then(m => ({ default: m.AIMenuPage })));
 const CustomerAssetLibraryPage = lazy(() => import("@/pages/app/AssetLibraryPage").then(m => ({ default: m.AssetLibraryPage })));
 const CustomerFeaturedRecipesPage = lazy(() => import("@/pages/app/FeaturedRecipesPage").then(m => ({ default: m.FeaturedRecipesPage })));
@@ -274,6 +276,8 @@ function CustomerAppRoutes() {
           <Route path="follow-requests" element={<Suspense fallback={<LoadingSpinner />}><CustomerFollowRequestsPage /></Suspense>} />
           <Route path="inbox" element={<Suspense fallback={<LoadingSpinner />}><CustomerInboxPage /></Suspense>} />
           <Route path="messages" element={<Suspense fallback={<LoadingSpinner />}><CustomerMessagesPage /></Suspense>} />
+          <Route path="challenges" element={<Suspense fallback={<LoadingSpinner />}><CustomerChallengesPage /></Suspense>} />
+          <Route path="events" element={<Suspense fallback={<LoadingSpinner />}><CustomerEventsPage /></Suspense>} />
           <Route path="assets" element={<Suspense fallback={<LoadingSpinner />}><CustomerAssetLibraryPage /></Suspense>} />
           <Route path="featured" element={<Suspense fallback={<LoadingSpinner />}><CustomerFeaturedRecipesPage /></Suspense>} />
         </Route>
