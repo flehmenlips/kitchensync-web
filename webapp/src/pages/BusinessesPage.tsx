@@ -59,6 +59,9 @@ import {
   Globe,
   ArrowUpDown,
   Users as UsersIcon,
+  BarChart3,
+  DollarSign,
+  ShoppingBag,
 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -153,6 +156,7 @@ export function BusinessesPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [businessAnalytics, setBusinessAnalytics] = useState<{ todayRevenue: number; todayOrders: number; newCustomers: number } | null>(null);
   const [sortField, setSortField] = useState<'name' | 'type' | 'date' | 'status'>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
@@ -189,14 +193,19 @@ export function BusinessesPage() {
     setIsLoadingDetails(true);
     setIsDetailOpen(true);
     setTeamMembers([]);
+    setBusinessAnalytics(null);
 
     try {
-      const [details, team] = await Promise.all([
+      const [details, team, analytics] = await Promise.all([
         api.get<BusinessDetails>(`/api/business/${business.id}`),
         api.get<TeamMember[]>(`/api/business/${business.id}/team`).catch(() => [] as TeamMember[]),
+        api.get<{ todayRevenue: number; todayOrders: number; newCustomers: number }>(
+          `/api/analytics/${business.id}/dashboard?range=7d`
+        ).catch(() => null),
       ]);
       setSelectedBusiness(details);
       setTeamMembers(team || []);
+      setBusinessAnalytics(analytics);
     } catch (error) {
       setSelectedBusiness(business);
     } finally {
@@ -861,6 +870,39 @@ export function BusinessesPage() {
                         <Badge variant="outline" className="capitalize text-xs">{member.role}</Badge>
                       </div>
                     ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Quick Analytics */}
+              {businessAnalytics ? (
+                <div className="space-y-3">
+                  <h4 className="font-medium text-foreground text-sm flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4" />
+                    Quick Analytics
+                  </h4>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="p-3 rounded-lg bg-secondary/30 text-center">
+                      <DollarSign className="h-4 w-4 mx-auto text-emerald-400 mb-1" />
+                      <p className="text-lg font-bold text-foreground">
+                        ${(businessAnalytics.todayRevenue || 0).toFixed(0)}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">Today Revenue</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-secondary/30 text-center">
+                      <ShoppingBag className="h-4 w-4 mx-auto text-blue-400 mb-1" />
+                      <p className="text-lg font-bold text-foreground">
+                        {businessAnalytics.todayOrders || 0}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">Today Orders</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-secondary/30 text-center">
+                      <UsersIcon className="h-4 w-4 mx-auto text-violet-400 mb-1" />
+                      <p className="text-lg font-bold text-foreground">
+                        {businessAnalytics.newCustomers || 0}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">New Customers</p>
+                    </div>
                   </div>
                 </div>
               ) : null}

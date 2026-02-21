@@ -30,6 +30,7 @@ import {
   ExternalLink,
   Brain,
 } from 'lucide-react';
+import { NotificationCenter } from '@/components/NotificationCenter';
 
 interface NavItem {
   title: string;
@@ -138,15 +139,20 @@ export function DashboardLayout() {
       {/* User info & sign out */}
       <div className="p-4 space-y-3">
         {!collapsed ? (
-          <div className="px-3 py-2 bg-secondary/30 rounded-lg">
-            <p className="text-sm font-medium text-foreground truncate">
-              {adminUser?.email}
-            </p>
-            <p className="text-xs text-muted-foreground capitalize">
-              {adminUser?.role}
-            </p>
+          <div className="px-3 py-2 bg-secondary/30 rounded-lg flex items-center justify-between">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">
+                {adminUser?.email}
+              </p>
+              <p className="text-xs text-muted-foreground capitalize">
+                {adminUser?.role}
+              </p>
+            </div>
+            <NotificationCenter />
           </div>
-        ) : null}
+        ) : (
+          <NotificationCenter />
+        )}
         <Button
           variant="ghost"
           size={collapsed ? 'icon' : 'default'}
@@ -171,13 +177,16 @@ export function DashboardLayout() {
             </div>
             <span className="font-semibold text-foreground">KitchenSync Admin</span>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setMobileOpen(!mobileOpen)}
-          >
-            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
+          <div className="flex items-center gap-1">
+            <NotificationCenter />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileOpen(!mobileOpen)}
+            >
+              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+          </div>
         </div>
       </div>
 

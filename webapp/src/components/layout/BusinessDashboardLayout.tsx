@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useBusiness } from '@/contexts/BusinessContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { NotificationCenter } from '@/components/NotificationCenter';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -208,15 +209,20 @@ export function BusinessDashboardLayout() {
       {/* User info & sign out */}
       <div className="p-4 space-y-3">
         {!collapsed && businessUser?.email ? (
-          <div className="px-3 py-2 bg-secondary/30 rounded-lg">
-            <p className="text-sm font-medium text-foreground truncate">
-              {businessUser.email}
-            </p>
-            <p className="text-xs text-muted-foreground capitalize">
-              {businessUser?.role || 'Owner'}
-            </p>
+          <div className="px-3 py-2 bg-secondary/30 rounded-lg flex items-center justify-between">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">
+                {businessUser.email}
+              </p>
+              <p className="text-xs text-muted-foreground capitalize">
+                {businessUser?.role || 'Owner'}
+              </p>
+            </div>
+            <NotificationCenter />
           </div>
-        ) : null}
+        ) : (
+          <NotificationCenter />
+        )}
         <Button
           variant="ghost"
           size={collapsed ? 'icon' : 'default'}
