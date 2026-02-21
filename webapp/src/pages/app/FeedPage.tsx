@@ -21,6 +21,10 @@ import {
 } from 'lucide-react';
 import { usePostFeed } from '@/hooks/usePosts';
 import { PostCard } from '@/components/customer/PostCard';
+import { StoryRow } from '@/components/customer/StoryRow';
+import { StoryViewer } from '@/components/customer/StoryViewer';
+import { useActiveStories } from '@/hooks/useStories';
+import type { StoryGroup } from '@/types/stories';
 import type { Post } from '@/types/posts';
 
 function formatTime(val: unknown): string {
@@ -122,6 +126,9 @@ export function FeedPage() {
   const { user } = useCustomerAuth();
   const [tab, setTab] = useState<'foryou' | 'following'>('foryou');
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const [storyViewerOpen, setStoryViewerOpen] = useState(false);
+  const [storyGroupIndex, setStoryGroupIndex] = useState(0);
+  const { data: storyGroups = [] } = useActiveStories();
 
   const {
     data,
@@ -171,8 +178,26 @@ export function FeedPage() {
     return bTime - aTime;
   });
 
+  const handleStoryClick = (group: StoryGroup, idx: number) => {
+    const allIdx = storyGroups.findIndex(g => g.user_id === group.user_id && g.business_id === group.business_id);
+    setStoryGroupIndex(allIdx >= 0 ? allIdx : idx);
+    setStoryViewerOpen(true);
+  };
+
   return (
     <div className="space-y-4">
+      {/* Stories row */}
+      <StoryRow onStoryClick={handleStoryClick} />
+
+      {/* Story viewer overlay */}
+      {storyViewerOpen && storyGroups.length > 0 && (
+        <StoryViewer
+          groups={storyGroups}
+          initialGroupIndex={storyGroupIndex}
+          onClose={() => setStoryViewerOpen(false)}
+        />
+      )}
+
       {/* Header with create button */}
       <div className="flex items-center justify-between">
         <Tabs value={tab} onValueChange={(v) => setTab(v as 'foryou' | 'following')} className="flex-1">
