@@ -57,9 +57,11 @@ import {
   AlertCircle,
   Milk,
   Nut,
+  Settings,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useBusiness } from '@/contexts/BusinessContext';
+import { toast } from 'sonner';
 
 interface MenuCategory {
   id: string;
@@ -73,6 +75,28 @@ interface MenuCategory {
   availableEndTime: string | null;
   availableDays: string | null;
   items: MenuItem[];
+}
+
+interface Modifier {
+  id: string;
+  modifierGroupId: string;
+  name: string;
+  priceAdjustment: number;
+  displayOrder: number;
+  isDefault: boolean;
+  isAvailable: boolean;
+}
+
+interface ModifierGroup {
+  id: string;
+  menuItemId: string;
+  name: string;
+  description: string | null;
+  displayOrder: number;
+  isRequired: boolean;
+  minSelections: number;
+  maxSelections: number;
+  modifiers: Modifier[];
 }
 
 interface MenuItem {
@@ -96,6 +120,7 @@ interface MenuItem {
   unavailableReason: string | null;
   prepTimeMinutes: number | null;
   tags: string | null;
+  modifierGroups?: ModifierGroup[];
 }
 
 export function MenuPage() {
@@ -113,6 +138,18 @@ export function MenuPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'category' | 'item'; id: string; name: string } | null>(null);
+
+  // Modifier group state
+  const [modGroupDialogOpen, setModGroupDialogOpen] = useState(false);
+  const [editingModGroup, setEditingModGroup] = useState<ModifierGroup | null>(null);
+  const [modGroupItemId, setModGroupItemId] = useState<string>('');
+  const [modGroupForm, setModGroupForm] = useState({ name: '', description: '', isRequired: false, minSelections: '0', maxSelections: '1' });
+  const [modDialogOpen, setModDialogOpen] = useState(false);
+  const [editingMod, setEditingMod] = useState<Modifier | null>(null);
+  const [modGroupId, setModGroupId] = useState<string>('');
+  const [modForm, setModForm] = useState({ name: '', priceAdjustment: '0', isDefault: false });
+  const [isSavingMod, setIsSavingMod] = useState(false);
+  const [expandedModGroups, setExpandedModGroups] = useState<Set<string>>(new Set());
 
   // Category form state
   const [categoryForm, setCategoryForm] = useState({
@@ -362,6 +399,135 @@ export function MenuPage() {
     } else {
       deleteItem.mutate(deleteTarget.id);
     }
+  };
+
+  // Modifier Group handlers
+  const openAddModGroup = (itemId: string) => {
+    setModGroupItemId(itemId);
+    setEditingModGroup(null);
+    setModGroupForm({ name: '', description: '', isRequired: false, minSelections: '0', maxSelections: '1' });
+    setModGroupDialogOpen(true);
+  };
+
+  const openEditModGroup = (group: ModifierGroup) => {
+    setEditingModGroup(group);
+    setModGroupItemId(group.menuItemId);
+    setModGroupForm({
+      name: group.name,
+      description: group.description || '',
+      isRequired: group.isRequired,
+      minSelections: group.minSelections.toString(),
+      maxSelections: group.maxSelections.toString(),
+    });
+    setModGroupDialogOpen(true);
+  };
+
+  const handleSaveModGroup = async () => {
+    if (!modGroupForm.name.trim()) return;
+    setIsSavingMod(true);
+    try {
+      if (editingModGroup) {
+        await api.put(`/api/menu/${businessId}/modifier-groups/${editingModGroup.id}`, {
+          name: modGroupForm.name,
+          description: modGroupForm.description || undefined,
+          isRequired: modGroupForm.isRequired,
+          minSelections: parseInt(modGroupForm.minSelections) || 0,
+          maxSelections: parseInt(modGroupForm.maxSelections) || 1,
+        });
+      } else {
+        await api.post(`/api/menu/${businessId}/modifier-groups`, {
+          menuItemId: modGroupItemId,
+          name: modGroupForm.name,
+          description: modGroupForm.description || undefined,
+          isRequired: modGroupForm.isRequired,
+          minSelections: parseInt(modGroupForm.minSelections) || 0,
+          maxSelections: parseInt(modGroupForm.maxSelections) || 1,
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['menu-categories', businessId] });
+      setModGroupDialogOpen(false);
+      toast.success(editingModGroup ? 'Modifier group updated' : 'Modifier group created');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save modifier group');
+    } finally {
+      setIsSavingMod(false);
+    }
+  };
+
+  const handleDeleteModGroup = async (groupId: string) => {
+    try {
+      await api.delete(`/api/menu/${businessId}/modifier-groups/${groupId}`);
+      queryClient.invalidateQueries({ queryKey: ['menu-categories', businessId] });
+      toast.success('Modifier group deleted');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete modifier group');
+    }
+  };
+
+  // Modifier handlers
+  const openAddModifier = (groupId: string) => {
+    setModGroupId(groupId);
+    setEditingMod(null);
+    setModForm({ name: '', priceAdjustment: '0', isDefault: false });
+    setModDialogOpen(true);
+  };
+
+  const openEditModifier = (modifier: Modifier) => {
+    setModGroupId(modifier.modifierGroupId);
+    setEditingMod(modifier);
+    setModForm({
+      name: modifier.name,
+      priceAdjustment: modifier.priceAdjustment.toString(),
+      isDefault: modifier.isDefault,
+    });
+    setModDialogOpen(true);
+  };
+
+  const handleSaveModifier = async () => {
+    if (!modForm.name.trim()) return;
+    setIsSavingMod(true);
+    try {
+      if (editingMod) {
+        await api.put(`/api/menu/${businessId}/modifiers/${editingMod.id}`, {
+          name: modForm.name,
+          priceAdjustment: parseFloat(modForm.priceAdjustment) || 0,
+          isDefault: modForm.isDefault,
+        });
+      } else {
+        await api.post(`/api/menu/${businessId}/modifiers`, {
+          modifierGroupId: modGroupId,
+          name: modForm.name,
+          priceAdjustment: parseFloat(modForm.priceAdjustment) || 0,
+          isDefault: modForm.isDefault,
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['menu-categories', businessId] });
+      setModDialogOpen(false);
+      toast.success(editingMod ? 'Modifier updated' : 'Modifier added');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save modifier');
+    } finally {
+      setIsSavingMod(false);
+    }
+  };
+
+  const handleDeleteModifier = async (modId: string) => {
+    try {
+      await api.delete(`/api/menu/${businessId}/modifiers/${modId}`);
+      queryClient.invalidateQueries({ queryKey: ['menu-categories', businessId] });
+      toast.success('Modifier deleted');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete modifier');
+    }
+  };
+
+  const toggleModGroupExpand = (itemId: string) => {
+    setExpandedModGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) next.delete(itemId);
+      else next.add(itemId);
+      return next;
+    });
   };
 
   const toggleCategory = (categoryId: string) => {
@@ -673,6 +839,77 @@ export function MenuPage() {
                             </DropdownMenu>
                           </div>
                         </div>
+
+                        {/* Modifier Groups */}
+                        {item.modifierGroups && item.modifierGroups.length > 0 && (
+                          <div className="ml-8 mt-2">
+                            <button
+                              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                              onClick={() => toggleModGroupExpand(item.id)}
+                            >
+                              <Settings className="h-3 w-3" />
+                              {item.modifierGroups.length} modifier group{item.modifierGroups.length !== 1 ? 's' : ''}
+                              {expandedModGroups.has(item.id) ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                            </button>
+                            {expandedModGroups.has(item.id) && (
+                              <div className="mt-2 space-y-2">
+                                {item.modifierGroups.map((group) => (
+                                  <div key={group.id} className="p-2 rounded bg-secondary/20 border border-border/30">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium text-foreground">{group.name}</span>
+                                        {group.isRequired && <Badge variant="outline" className="text-[10px] px-1 py-0">Required</Badge>}
+                                        <span className="text-xs text-muted-foreground">
+                                          ({group.minSelections}-{group.maxSelections} selections)
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-1">
+                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openAddModifier(group.id)}>
+                                          <Plus className="h-3 w-3" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openEditModGroup(group)}>
+                                          <Edit className="h-3 w-3" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400" onClick={() => handleDeleteModGroup(group.id)}>
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                    {group.modifiers.length > 0 && (
+                                      <div className="mt-1 flex flex-wrap gap-1">
+                                        {group.modifiers.map((mod) => (
+                                          <Badge
+                                            key={mod.id}
+                                            variant="secondary"
+                                            className="text-[10px] cursor-pointer hover:bg-secondary"
+                                            onClick={() => openEditModifier(mod)}
+                                          >
+                                            {mod.name}
+                                            {mod.priceAdjustment > 0 && ` +$${mod.priceAdjustment.toFixed(2)}`}
+                                            {mod.isDefault && ' ✓'}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                                <Button variant="ghost" size="sm" className="text-xs" onClick={() => openAddModGroup(item.id)}>
+                                  <Plus className="h-3 w-3 mr-1" /> Add Group
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {(!item.modifierGroups || item.modifierGroups.length === 0) && (
+                          <div className="ml-8 mt-1">
+                            <button
+                              className="text-xs text-muted-foreground/60 hover:text-primary transition-colors flex items-center gap-1"
+                              onClick={() => openAddModGroup(item.id)}
+                            >
+                              <Plus className="h-3 w-3" /> Add modifiers
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -952,6 +1189,124 @@ export function MenuPage() {
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
               {editingItem ? 'Save Changes' : 'Add Item'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modifier Group Dialog */}
+      <Dialog open={modGroupDialogOpen} onOpenChange={setModGroupDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingModGroup ? 'Edit Modifier Group' : 'Add Modifier Group'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Name *</Label>
+              <Input
+                value={modGroupForm.name}
+                onChange={(e) => setModGroupForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="e.g., Size, Toppings, Sauce"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Input
+                value={modGroupForm.description}
+                onChange={(e) => setModGroupForm((f) => ({ ...f, description: e.target.value }))}
+                placeholder="Choose your preferred option"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label>Required</Label>
+              <Switch
+                checked={modGroupForm.isRequired}
+                onCheckedChange={(checked) => setModGroupForm((f) => ({ ...f, isRequired: checked }))}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Min Selections</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={modGroupForm.minSelections}
+                  onChange={(e) => setModGroupForm((f) => ({ ...f, minSelections: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Max Selections</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={modGroupForm.maxSelections}
+                  onChange={(e) => setModGroupForm((f) => ({ ...f, maxSelections: e.target.value }))}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModGroupDialogOpen(false)} disabled={isSavingMod}>Cancel</Button>
+            <Button onClick={handleSaveModGroup} disabled={isSavingMod || !modGroupForm.name.trim()}>
+              {isSavingMod ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</> : editingModGroup ? 'Save' : 'Create'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modifier Dialog */}
+      <Dialog open={modDialogOpen} onOpenChange={setModDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingMod ? 'Edit Modifier' : 'Add Modifier'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Name *</Label>
+              <Input
+                value={modForm.name}
+                onChange={(e) => setModForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="e.g., Small, Large, Extra Cheese"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Price Adjustment</Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={modForm.priceAdjustment}
+                  onChange={(e) => setModForm((f) => ({ ...f, priceAdjustment: e.target.value }))}
+                  className="pl-10"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Default Selection</Label>
+                <p className="text-xs text-muted-foreground">Pre-selected when ordering</p>
+              </div>
+              <Switch
+                checked={modForm.isDefault}
+                onCheckedChange={(checked) => setModForm((f) => ({ ...f, isDefault: checked }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModDialogOpen(false)} disabled={isSavingMod}>Cancel</Button>
+            {editingMod && (
+              <Button
+                variant="destructive"
+                onClick={() => { handleDeleteModifier(editingMod.id); setModDialogOpen(false); }}
+                disabled={isSavingMod}
+              >
+                Delete
+              </Button>
+            )}
+            <Button onClick={handleSaveModifier} disabled={isSavingMod || !modForm.name.trim()}>
+              {isSavingMod ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</> : editingMod ? 'Save' : 'Add'}
             </Button>
           </DialogFooter>
         </DialogContent>
