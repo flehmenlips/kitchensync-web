@@ -1,8 +1,32 @@
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   UserCog,
   Plus,
@@ -12,12 +36,15 @@ import {
   Shield,
   Calendar,
   Users,
+  Loader2,
+  Trash2,
+  Edit,
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBusiness } from '@/contexts/BusinessContext';
 import { api } from '@/lib/api';
+import { toast } from 'sonner';
 
-// Type for team member from API
 interface TeamMember {
   id: string;
   businessId: string;
@@ -35,10 +62,27 @@ interface TeamMember {
   } | null;
 }
 
+const ROLES = ['owner', 'manager', 'staff', 'accountant', 'marketing'] as const;
+
 export function TeamPage() {
   const { business } = useBusiness();
+  const queryClient = useQueryClient();
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Fetch team members from API
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<string>('staff');
+  const [isInviting, setIsInviting] = useState(false);
+
+  const [editMember, setEditMember] = useState<TeamMember | null>(null);
+  const [editRole, setEditRole] = useState('');
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  const [removeMember, setRemoveMember] = useState<TeamMember | null>(null);
+  const [isRemoveOpen, setIsRemoveOpen] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
+
   const { data: team = [], isLoading, error } = useQuery({
     queryKey: ['team', business?.id],
     queryFn: async () => {
@@ -48,45 +92,109 @@ export function TeamPage() {
     enabled: !!business?.id,
   });
 
-  // Calculate stats from real data
+  const filteredTeam = useMemo(() => {
+    if (!searchQuery.trim()) return team;
+    const q = searchQuery.toLowerCase();
+    return team.filter(
+      (m) =>
+        m.user?.name?.toLowerCase().includes(q) ||
+        m.user?.email?.toLowerCase().includes(q) ||
+        m.role.toLowerCase().includes(q)
+    );
+  }, [team, searchQuery]);
+
   const totalStaff = team.length;
-  const activeCount = team.filter(m => m.status === 'active').length;
-  const onLeaveCount = team.filter(m => m.status === 'on_leave' || m.status === 'inactive').length;
-  const invitedCount = team.filter(m => m.status === 'invited').length;
+  const activeCount = team.filter((m) => m.status === 'active').length;
+  const onLeaveCount = team.filter((m) => m.status === 'on_leave' || m.status === 'inactive').length;
+  const invitedCount = team.filter((m) => m.status === 'invited').length;
+
+  const handleInvite = async () => {
+    if (!business?.id || !inviteEmail.trim()) return;
+    setIsInviting(true);
+    try {
+      await api.post(`/api/business/${business.id}/team/invite`, {
+        email: inviteEmail.trim(),
+        role: inviteRole,
+      });
+      queryClient.invalidateQueries({ queryKey: ['team', business.id] });
+      setIsInviteOpen(false);
+      setInviteEmail('');
+      setInviteRole('staff');
+      toast.success('Team member invited successfully');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to invite team member');
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
+  const handleEditRole = async () => {
+    if (!business?.id || !editMember) return;
+    setIsSavingEdit(true);
+    try {
+      await api.put(`/api/business/${business.id}/team/${editMember.id}`, {
+        role: editRole,
+      });
+      queryClient.invalidateQueries({ queryKey: ['team', business.id] });
+      setIsEditOpen(false);
+      setEditMember(null);
+      toast.success('Role updated successfully');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update role');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
+  const handleRemove = async () => {
+    if (!business?.id || !removeMember) return;
+    setIsRemoving(true);
+    try {
+      await api.delete(`/api/business/${business.id}/team/${removeMember.id}`);
+      queryClient.invalidateQueries({ queryKey: ['team', business.id] });
+      setIsRemoveOpen(false);
+      setRemoveMember(null);
+      toast.success('Team member removed');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to remove team member');
+    } finally {
+      setIsRemoving(false);
+    }
+  };
+
+  const openEdit = (member: TeamMember) => {
+    setEditMember(member);
+    setEditRole(member.role);
+    setIsEditOpen(true);
+  };
+
+  const openRemove = (member: TeamMember) => {
+    setRemoveMember(member);
+    setIsRemoveOpen(true);
+  };
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'owner':
-        return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
-      case 'manager':
-        return 'bg-violet-500/10 text-violet-400 border-violet-500/20';
-      case 'chef':
-        return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-      case 'server':
-        return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
-      case 'bartender':
-        return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-      case 'host':
-        return 'bg-pink-500/10 text-pink-400 border-pink-500/20';
-      case 'staff':
-        return 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20';
-      default:
-        return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
+      case 'owner': return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+      case 'manager': return 'bg-violet-500/10 text-violet-400 border-violet-500/20';
+      case 'chef': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+      case 'server': return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+      case 'bartender': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+      case 'host': return 'bg-pink-500/10 text-pink-400 border-pink-500/20';
+      case 'staff': return 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20';
+      case 'accountant': return 'bg-teal-500/10 text-teal-400 border-teal-500/20';
+      case 'marketing': return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+      default: return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active':
-        return 'bg-emerald-500/10 text-emerald-400';
-      case 'invited':
-        return 'bg-blue-500/10 text-blue-400';
-      case 'on_leave':
-        return 'bg-amber-500/10 text-amber-400';
-      case 'inactive':
-        return 'bg-muted text-muted-foreground';
-      default:
-        return 'bg-gray-500/10 text-gray-400';
+      case 'active': return 'bg-emerald-500/10 text-emerald-400';
+      case 'invited': return 'bg-blue-500/10 text-blue-400';
+      case 'on_leave': return 'bg-amber-500/10 text-amber-400';
+      case 'inactive': return 'bg-muted text-muted-foreground';
+      default: return 'bg-gray-500/10 text-gray-400';
     }
   };
 
@@ -101,7 +209,7 @@ export function TeamPage() {
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return '?';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   return (
@@ -114,7 +222,7 @@ export function TeamPage() {
             Manage your staff, schedules, and permissions
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setIsInviteOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Add Team Member
         </Button>
@@ -123,10 +231,12 @@ export function TeamPage() {
       {/* Search */}
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <input
+        <Input
           type="text"
           placeholder="Search team members..."
-          className="w-full pl-10 pr-4 py-2 bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10 bg-secondary/50"
         />
       </div>
 
@@ -134,41 +244,25 @@ export function TeamPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-card border-border/50">
           <CardContent className="p-4">
-            {isLoading ? (
-              <Skeleton className="h-8 w-12 mb-1" />
-            ) : (
-              <p className="text-2xl font-bold text-foreground">{totalStaff}</p>
-            )}
+            {isLoading ? <Skeleton className="h-8 w-12 mb-1" /> : <p className="text-2xl font-bold text-foreground">{totalStaff}</p>}
             <p className="text-sm text-muted-foreground">Total Staff</p>
           </CardContent>
         </Card>
         <Card className="bg-card border-border/50">
           <CardContent className="p-4">
-            {isLoading ? (
-              <Skeleton className="h-8 w-12 mb-1" />
-            ) : (
-              <p className="text-2xl font-bold text-emerald-400">{activeCount}</p>
-            )}
+            {isLoading ? <Skeleton className="h-8 w-12 mb-1" /> : <p className="text-2xl font-bold text-emerald-400">{activeCount}</p>}
             <p className="text-sm text-muted-foreground">Active</p>
           </CardContent>
         </Card>
         <Card className="bg-card border-border/50">
           <CardContent className="p-4">
-            {isLoading ? (
-              <Skeleton className="h-8 w-12 mb-1" />
-            ) : (
-              <p className="text-2xl font-bold text-amber-400">{onLeaveCount}</p>
-            )}
+            {isLoading ? <Skeleton className="h-8 w-12 mb-1" /> : <p className="text-2xl font-bold text-amber-400">{onLeaveCount}</p>}
             <p className="text-sm text-muted-foreground">On Leave / Inactive</p>
           </CardContent>
         </Card>
         <Card className="bg-card border-border/50">
           <CardContent className="p-4">
-            {isLoading ? (
-              <Skeleton className="h-8 w-12 mb-1" />
-            ) : (
-              <p className="text-2xl font-bold text-blue-400">{invitedCount}</p>
-            )}
+            {isLoading ? <Skeleton className="h-8 w-12 mb-1" /> : <p className="text-2xl font-bold text-blue-400">{invitedCount}</p>}
             <p className="text-sm text-muted-foreground">Pending Invites</p>
           </CardContent>
         </Card>
@@ -197,21 +291,25 @@ export function TeamPage() {
             <div className="text-center py-8 text-red-400">
               Failed to load team members. Please try again.
             </div>
-          ) : team.length === 0 ? (
+          ) : filteredTeam.length === 0 ? (
             <div className="text-center py-12">
               <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-lg font-medium text-foreground">No team members yet</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Add your first team member to get started
+              <p className="text-lg font-medium text-foreground">
+                {team.length === 0 ? 'No team members yet' : 'No matching team members'}
               </p>
-              <Button className="mt-4">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Team Member
-              </Button>
+              <p className="text-sm text-muted-foreground mt-1">
+                {team.length === 0 ? 'Add your first team member to get started' : 'Try a different search term'}
+              </p>
+              {team.length === 0 && (
+                <Button className="mt-4" onClick={() => setIsInviteOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Team Member
+                </Button>
+              )}
             </div>
           ) : (
             <div className="space-y-4">
-              {team.map((member) => (
+              {filteredTeam.map((member) => (
                 <div
                   key={member.id}
                   className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
@@ -255,9 +353,28 @@ export function TeamPage() {
                         {formatDate(member.joinedAt || member.invitedAt || member.createdAt)}
                       </p>
                     </div>
-                    <Button variant="ghost" size="icon">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEdit(member)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit Role
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-400 focus:text-red-400"
+                          onClick={() => openRemove(member)}
+                          disabled={member.role === 'owner'}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Remove
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               ))}
@@ -265,6 +382,107 @@ export function TeamPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Invite Dialog */}
+      <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Invite Team Member</DialogTitle>
+            <DialogDescription>
+              Send an invitation to join your business team. They must already have a KitchenSync account.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Email</label>
+              <Input
+                placeholder="colleague@example.com"
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                className="bg-secondary/50"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Role</label>
+              <Select value={inviteRole} onValueChange={setInviteRole}>
+                <SelectTrigger className="bg-secondary/50">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLES.filter((r) => r !== 'owner').map((r) => (
+                    <SelectItem key={r} value={r} className="capitalize">{r}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsInviteOpen(false)} disabled={isInviting}>
+              Cancel
+            </Button>
+            <Button onClick={handleInvite} disabled={isInviting || !inviteEmail.trim()}>
+              {isInviting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Inviting...</> : 'Send Invite'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Role Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Role</DialogTitle>
+            <DialogDescription>
+              Change the role for {editMember?.user?.name || editMember?.user?.email || 'this member'}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Role</label>
+              <Select value={editRole} onValueChange={setEditRole}>
+                <SelectTrigger className="bg-secondary/50">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLES.map((r) => (
+                    <SelectItem key={r} value={r} className="capitalize">{r}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditOpen(false)} disabled={isSavingEdit}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditRole} disabled={isSavingEdit || editRole === editMember?.role}>
+              {isSavingEdit ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</> : 'Save'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Confirmation Dialog */}
+      <Dialog open={isRemoveOpen} onOpenChange={setIsRemoveOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-400">Remove Team Member</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove {removeMember?.user?.name || removeMember?.user?.email || 'this member'} from the team?
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRemoveOpen(false)} disabled={isRemoving}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleRemove} disabled={isRemoving}>
+              {isRemoving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Removing...</> : 'Remove'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
