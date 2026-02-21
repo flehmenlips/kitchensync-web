@@ -1,3 +1,5 @@
+import { supabase } from "./supabase";
+
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
 
 class ApiError extends Error {
@@ -12,13 +14,27 @@ interface ApiResponse<T> {
   data: T;
 }
 
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      return { Authorization: `Bearer ${session.access_token}` };
+    }
+  } catch {
+    // No session available
+  }
+  return {};
+}
+
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
+  const authHeaders = await getAuthHeaders();
 
   const config: RequestInit = {
     ...options,
     headers: {
       "Content-Type": "application/json",
+      ...authHeaders,
       ...options.headers,
     },
     credentials: "include",
@@ -52,12 +68,13 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   return undefined as T;
 }
 
-// Raw request for non-JSON endpoints (uploads, downloads, streams)
 async function rawRequest(endpoint: string, options: RequestInit = {}): Promise<Response> {
   const url = `${API_BASE_URL}${endpoint}`;
+  const authHeaders = await getAuthHeaders();
   const config: RequestInit = {
     ...options,
     headers: {
+      ...authHeaders,
       ...options.headers,
     },
     credentials: "include",
