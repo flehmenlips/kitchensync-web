@@ -56,6 +56,7 @@ import {
   ToggleRight,
   Trash2,
   AlertTriangle,
+  Globe,
 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -118,7 +119,7 @@ interface RelatedCounts {
   orders: number;
   customers: number;
   reservations: number;
-  teamMembers: number;
+  restaurantTables: number;
 }
 
 type TypeFilter = 'all' | string;
@@ -251,8 +252,8 @@ export function BusinessesPage() {
     setIsLoadingRelatedCounts(true);
 
     try {
-      const data = await api.get<RelatedCounts>(`/api/business/${business.id}/related-counts`);
-      if (data) setRelatedCounts(data);
+      const data = await api.get<{ counts: RelatedCounts }>(`/api/business/${business.id}/related-counts`);
+      if (data?.counts) setRelatedCounts(data.counts);
     } catch (error) {
       // Silently fail - counts are informational only
     } finally {
@@ -269,7 +270,9 @@ export function BusinessesPage() {
       const endpoint = deleteType === 'permanent'
         ? `/api/business/${businessToDelete.id}?hard=true`
         : `/api/business/${businessToDelete.id}`;
-      await api.delete(endpoint);
+      await api.delete(endpoint, {
+        body: JSON.stringify({ reason: deleteReason || undefined }),
+      });
 
       queryClient.invalidateQueries({ queryKey: ['businesses'] });
       setIsDeleteDialogOpen(false);
@@ -318,6 +321,14 @@ export function BusinessesPage() {
   const getDayName = (day: number) => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     return days[day];
+  };
+
+  const formatTime = (time: string | null) => {
+    if (!time) return '';
+    const [hours, minutes] = time.split(':').map(Number);
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const h = hours % 12 || 12;
+    return `${h}:${String(minutes).padStart(2, '0')} ${ampm}`;
   };
 
   // Stats
@@ -523,7 +534,7 @@ export function BusinessesPage() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Link to="/business">
+                            <Link to={`/business?businessId=${business.id}`}>
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -675,6 +686,19 @@ export function BusinessesPage() {
                       </span>
                     </div>
                   ) : null}
+                  {selectedBusiness.websiteUrl ? (
+                    <div className="flex items-center gap-3 text-sm">
+                      <Globe className="h-4 w-4 text-muted-foreground" />
+                      <a
+                        href={selectedBusiness.websiteUrl.startsWith('http') ? selectedBusiness.websiteUrl : `https://${selectedBusiness.websiteUrl}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline truncate"
+                      >
+                        {selectedBusiness.websiteUrl}
+                      </a>
+                    </div>
+                  ) : null}
                   <div className="flex items-center gap-3 text-sm">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Registered:</span>
@@ -699,7 +723,7 @@ export function BusinessesPage() {
                             {hour.isClosed ? (
                               'Closed'
                             ) : (
-                              `${hour.openTime} - ${hour.closeTime}`
+                              `${formatTime(hour.openTime)} - ${formatTime(hour.closeTime)}`
                             )}
                           </span>
                         </div>
@@ -1081,10 +1105,10 @@ export function BusinessesPage() {
                         <span className="text-foreground font-medium">{relatedCounts.reservations}</span>
                       </div>
                     ) : null}
-                    {relatedCounts.teamMembers > 0 ? (
+                    {relatedCounts.restaurantTables > 0 ? (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Team Members:</span>
-                        <span className="text-foreground font-medium">{relatedCounts.teamMembers}</span>
+                        <span className="text-muted-foreground">Tables:</span>
+                        <span className="text-foreground font-medium">{relatedCounts.restaurantTables}</span>
                       </div>
                     ) : null}
                     {Object.values(relatedCounts).every(v => v === 0) ? (
