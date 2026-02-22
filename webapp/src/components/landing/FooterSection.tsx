@@ -13,7 +13,7 @@ export function FooterSection() {
                 <ChefHat className="h-5 w-5 text-primary" />
               </div>
               <span className="font-syne text-lg font-bold text-foreground">
-                KitchenSync
+                cook.book
               </span>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
@@ -86,15 +86,15 @@ export function FooterSection() {
         {/* Bottom */}
         <div className="mt-12 pt-8 border-t border-border/40 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} KitchenSync. All rights reserved.
+            &copy; {new Date().getFullYear()} cook.book. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
-            <a href="#" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/privacy" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
               Privacy Policy
-            </a>
-            <a href="#" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+            </Link>
+            <Link to="/terms" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
               Terms of Service
-            </a>
+            </Link>
           </div>
         </div>
       </div>

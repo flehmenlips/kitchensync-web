@@ -32,7 +32,7 @@ export function Navbar() {
               <ChefHat className="h-5 w-5 text-primary" />
             </div>
             <span className="font-syne text-lg font-bold text-foreground">
-              KitchenSync
+              cook.book
             </span>
           </Link>
 

@@ -31,6 +31,8 @@ import { BusinessesPage } from "@/pages/BusinessesPage";
 import { IntelligencePage } from "@/pages/IntelligencePage";
 import NotFound from "./pages/NotFound";
 import { LandingPage } from "./pages/LandingPage";
+import { PrivacyPolicyPage } from "./pages/PrivacyPolicyPage";
+import { TermsOfServicePage } from "./pages/TermsOfServicePage";
 import { Loader2 } from "lucide-react";
 
 // Business Console Pages
@@ -293,6 +295,8 @@ function AppRoutes() {
     <Routes>
       {/* Public Landing Page - no auth provider needed */}
       <Route path="/" element={<LandingPage />} />
+      <Route path="/privacy" element={<PrivacyPolicyPage />} />
+      <Route path="/terms" element={<TermsOfServicePage />} />
 
       {/* Public reservation page */}
       <Route path="/reserve/:businessSlug" element={<ReservationBookingPage />} />
